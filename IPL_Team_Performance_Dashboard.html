@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IPL Team Performance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: sticky scoreboard header with tabs; each tab is one slide-sized story with a headline, then chart cards in a 12-col grid. */
+:root{
+  --page:#f1f3f6; --surface:#fdfdfe; --ink:#101826; --ink2:#465163; --muted:#677285;
+  --grid:#e3e7ec; --axis:#c3cad4; --band:#eef2f7; --line:rgba(16,24,38,.11);
+  --s1:#2a78d6; --s2:#eb6834; --s1-soft:#cde2fb; --good:#006300; --warn:#8a5a00;
+  --display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --page:#0b0e12; --surface:#151a21; --ink:#eef1f5; --ink2:#b6bfcb; --muted:#8892a0;
+  --grid:#232a33; --axis:#3a4350; --band:#1b212a; --line:rgba(255,255,255,.1);
+  --s1:#3987e5; --s2:#d95926; --s1-soft:#184f95; --good:#0ca30c; --warn:#fab219; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --page:#0b0e12; --surface:#151a21; --ink:#eef1f5; --ink2:#b6bfcb; --muted:#8892a0;
+  --grid:#232a33; --axis:#3a4350; --band:#1b212a; --line:rgba(255,255,255,.1);
+  --s1:#3987e5; --s2:#d95926; --s1-soft:#184f95; --good:#0ca30c; --warn:#fab219; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--page);color:var(--ink);font:14px/1.5 var(--body);padding-inline:16px}
+.wrap{max-width:1180px;margin-inline:auto}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--page);margin-inline:-16px;padding:12px 16px 0;border-bottom:1px solid var(--line)}
+.top .inner{max-width:1180px;margin-inline:auto}
+.brand{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 16px}
+.brand h1{font:800 26px/1 var(--display);letter-spacing:.04em;text-transform:uppercase;margin:0}
+.brand p{margin:0;color:var(--muted);font-size:12.5px}
+nav.tabs{display:flex;gap:2px;overflow-x:auto;margin-top:10px;scrollbar-width:none}
+nav.tabs::-webkit-scrollbar{display:none}
+nav.tabs button{appearance:none;background:none;border:0;border-bottom:3px solid transparent;color:var(--ink2);font:500 13.5px var(--body);padding:8px 12px 9px;cursor:pointer;white-space:nowrap}
+nav.tabs button:hover{color:var(--ink)}
+nav.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--s1);font-weight:600}
+button:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--s1);outline-offset:2px}
+main{padding-block:22px 40px}
+.lead{font:800 clamp(26px,4.2vw,40px)/1.05 var(--display);letter-spacing:.01em;text-transform:uppercase;margin:0 0 6px;max-width:26ch;text-wrap:balance}
+.sub{color:var(--ink2);margin:0 0 20px;max-width:70ch}
+.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px}
+.c12{grid-column:span 12}.c8{grid-column:span 8}.c7{grid-column:span 7}.c6{grid-column:span 6}.c5{grid-column:span 5}.c4{grid-column:span 4}.c3{grid-column:span 3}
+@media (max-width:860px){.c8,.c7,.c6,.c5,.c4{grid-column:span 12}.c3{grid-column:span 6}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px;min-width:0}
+.card h3{margin:0 0 2px;font:600 14.5px/1.3 var(--body)}
+.card .hint{margin:0 0 12px;color:var(--muted);font-size:12.5px}
+.chart{width:100%;min-height:40px}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+svg text{font-family:var(--body);font-size:11px;fill:var(--ink2)}
+svg .m{fill:var(--muted)} svg .b{font-weight:600;fill:var(--ink)}
+.kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));border:1px solid var(--line);border-radius:6px;background:var(--surface);margin-bottom:16px}
+.kpi{padding:14px 16px;border-left:1px solid var(--line);min-width:0}
+.kpi:first-child{border-left:0}
+.kpi b{display:block;font:800 34px/1 var(--display);letter-spacing:.01em}
+.kpi span{display:block;color:var(--muted);font-size:12px;margin-top:4px}
+@media (max-width:860px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.kpi:nth-child(odd){border-left:0}.kpi:nth-child(n+3){border-top:1px solid var(--line)}}
+.phases{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:620px){.phases{grid-template-columns:1fr}}
+.ph{border-top:3px solid var(--s1);padding-top:8px}
+.ph:nth-child(2){border-top-color:var(--axis)}
+.ph h4{margin:0;font:700 15px var(--display);letter-spacing:.06em;text-transform:uppercase}
+.ph .big{font:800 36px/1.1 var(--display)}
+.ph dl{margin:6px 0 0;display:grid;grid-template-columns:1fr auto;gap:2px 10px;font-size:12.5px}
+.ph dt{color:var(--muted)} .ph dd{margin:0;font-variant-numeric:tabular-nums;text-align:right}
+.rows{display:grid;gap:7px}
+.row{display:grid;grid-template-columns:minmax(90px,150px) minmax(0,1fr) auto;gap:10px;align-items:center;font-size:12.5px}
+.row .lab{color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .tr{height:12px;background:var(--grid);border-radius:2px;position:relative}
+.row .fl{position:absolute;inset:0 auto 0 0;border-radius:2px 4px 4px 2px;background:var(--s1)}
+.row .v{font-variant-numeric:tabular-nums;min-width:48px;text-align:right}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.chip{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--ink2);border-radius:4px;padding:4px 9px;font:500 12px var(--body);cursor:pointer}
+.chip:hover{border-color:var(--axis);color:var(--ink)}
+.chip[aria-pressed="true"]{background:var(--s1);border-color:var(--s1);color:#fff}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--ink2);margin:0 0 8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+table.hm{border-collapse:separate;border-spacing:0 2px;width:100%;font-size:12.5px;font-variant-numeric:tabular-nums}
+.hm th{font-weight:500;color:var(--muted);text-align:center;padding:2px 4px;font-size:11.5px}
+.hm th:first-child,.hm td:first-child{text-align:left}
+.hm td{padding:5px 6px;text-align:center}
+.hm td:first-child{padding-left:0;color:var(--ink2);white-space:nowrap}
+.hm tr.sel td:first-child{color:var(--ink);font-weight:600}
+.hm td+td{border-radius:2px}
+.scroll{overflow-x:auto}
+.pill{display:inline-block;border-radius:3px;padding:1px 8px;font-size:12px;font-weight:600;border:1px solid var(--line);white-space:nowrap}
+.pill.sig{background:var(--s1);border-color:var(--s1);color:#fff}
+.pill.ns{background:transparent;color:var(--ink2)}
+.tier-Elite{background:var(--s1);color:#fff;border-color:var(--s1)}
+.tier-Strong{background:var(--s1-soft);color:var(--ink);border-color:transparent}
+.tier-Average{background:transparent;color:var(--ink2)}
+.tier-Struggling{background:transparent;color:var(--s2);border-color:var(--s2)}
+.hyp{display:grid;gap:0}
+.hrow{display:grid;grid-template-columns:44px minmax(0,1.6fr) minmax(0,1.3fr) 92px 120px;gap:6px 14px;padding:12px 0;border-top:1px solid var(--line);align-items:start}
+.hrow:first-child{border-top:0}
+.hrow .id{font:800 20px/1 var(--display);color:var(--s1)}
+.hrow p{margin:0}.hrow .q{font-weight:600}.hrow .n{color:var(--muted);font-size:12.5px}
+.hrow .num{font-variant-numeric:tabular-nums;font-size:13px}
+@media (max-width:860px){.hrow{grid-template-columns:36px minmax(0,1fr)}.hrow>*:nth-child(n+3){grid-column:2}}
+.card-report h2{margin:0;font:800 30px/1.05 var(--display);text-transform:uppercase;letter-spacing:.01em}
+.meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0 12px}
+.idx3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:12px}
+.idx3 div{border-top:2px solid var(--axis);padding-top:4px}
+.idx3 b{display:block;font:800 26px/1.1 var(--display)}
+.idx3 span{color:var(--muted);font-size:12px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:700px){.two{grid-template-columns:1fr}}
+.take{display:grid;gap:14px}
+.take article{display:grid;grid-template-columns:34px minmax(0,1fr);gap:4px 12px}
+.take .k{font:800 22px/1 var(--display);color:var(--s1)}
+.take h4{margin:0 0 2px;font:600 14.5px var(--body)}
+.take p{margin:0;color:var(--ink2)}
+.recs h4{margin:14px 0 4px;font:700 14px var(--display);letter-spacing:.07em;text-transform:uppercase;color:var(--ink)}
+.recs h4:first-child{margin-top:0}
+.recs ul{margin:0;padding-left:18px;color:var(--ink2)} .recs li{margin:3px 0}
+details{margin-top:10px} summary{cursor:pointer;color:var(--muted);font-size:12.5px}
+details .scroll{max-height:240px;overflow:auto;margin-top:6px}
+details table{border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums;width:100%}
+details th,details td{padding:3px 8px;text-align:right;border-bottom:1px solid var(--grid)}
+details th:first-child,details td:first-child{text-align:left}
+#tip{position:fixed;z-index:20;pointer-events:none;background:var(--ink);color:var(--surface);padding:6px 9px;border-radius:4px;font-size:12px;line-height:1.4;max-width:260px;opacity:0;transform:translateY(2px);transition:opacity .08s}
+#tip b{display:block}
+.hit{fill:transparent}.hit:hover{fill:var(--ink);fill-opacity:.06}
+.dot{cursor:default}
+.foot{color:var(--muted);font-size:12px;margin-top:22px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<style>body{margin:0}</style></head><body>
+<div class="wrap">
+<header class="top"><div class="inner">
+  <div class="brand"><h1>IPL Team Performance</h1><p id="meta"></p></div>
+  <nav class="tabs" role="tablist" aria-label="Dashboard sections" id="tabs"></nav>
+</div></header>
+
+<main>
+<section id="p-overview" role="tabpanel" hidden>
+  <h2 class="lead">Matches turn in the last four overs</h2>
+  <p class="sub" id="ov-sub"></p>
+  <div class="kpis" id="kpis"></div>
+  <div class="grid">
+    <div class="card c6"><h3>Runs per over</h3><p class="hint">Average runs scored in each over of an innings</p><div class="chart" data-chart="runsOver"></div><div id="tb-over"></div></div>
+    <div class="card c6"><h3>Wickets per over</h3><p class="hint">Average wickets falling in each over of an innings</p><div class="chart" data-chart="wktsOver"></div></div>
+    <div class="card c8"><h3>Three phases of an innings</h3><p class="hint">Every team metric in this dashboard is split by these phases</p><div class="phases" id="phases"></div></div>
+    <div class="card c4"><h3>How wickets fall</h3><p class="hint">Share of all dismissals</p><div class="rows" id="dismissals"></div></div>
+  </div>
+</section>
+
+<section id="p-seasons" role="tabpanel" hidden>
+  <h2 class="lead" id="se-lead"></h2>
+  <p class="sub" id="se-sub"></p>
+  <div class="grid">
+    <div class="card c6"><h3>Run rate by season</h3><p class="hint">Runs per over, all teams</p><div class="chart" data-chart="yrRR"></div><div id="tb-year"></div></div>
+    <div class="card c6"><h3>Sixes per match</h3><p class="hint">Both innings combined</p><div class="chart" data-chart="yrSix"></div></div>
+    <div class="card c12"><h3>Boundaries up, dot balls down</h3><p class="hint">Share of legal balls that went for four or six, and share that went for no run</p><div class="legend"><span><i style="background:var(--s1)"></i>Boundaries</span><span><i style="background:var(--muted)"></i>Dot balls</span></div><div class="chart" data-chart="yrShare"></div></div>
+  </div>
+</section>
+
+<section id="p-teams" role="tabpanel" hidden>
+  <h2 class="lead">Same run rate, different identities</h2>
+  <p class="sub" id="te-sub"></p>
+  <div class="chips" id="teamChips" aria-label="Choose a franchise"></div>
+  <div class="grid">
+    <div class="card c7"><h3>Batting against bowling</h3><p class="hint">Top right is best. Dashed lines mark the average franchise. Franchises with 30+ matches.</p><div class="chart" data-chart="scatter"></div></div>
+    <div class="card c5 card-report" id="report"></div>
+    <div class="card c6"><h3>Batting run rate by phase</h3><p class="hint">Runs per over, darker is higher</p><div class="scroll" id="hmBat"></div></div>
+    <div class="card c6"><h3>Bowling economy by phase</h3><p class="hint">Runs conceded per over, darker is lower</p><div class="scroll" id="hmBowl"></div></div>
+    <div class="card c7"><h3>Batting first against chasing</h3><p class="hint">Win % in each role. The line marks 50%. Franchises with 30+ innings in each role.</p><div class="legend"><span><i style="background:var(--s1)"></i>Batting first</span><span><i style="background:var(--s2)"></i>Chasing</span></div><div class="chart" data-chart="role"></div></div>
+    <div class="card c5"><h3>How each attack takes wickets</h3><p class="hint">Share of wickets taken, selected franchise</p><div class="rows" id="mix"></div></div>
+  </div>
+</section>
+
+<section id="p-tests" role="tabpanel" hidden>
+  <h2 class="lead" id="ts-lead"></h2>
+  <p class="sub">Seven tests at a 5% significance level, run on 2,180 innings. With this many innings small gaps become significant, so each row also shows the effect size (Cohen's d, or the gap in win % for the chi-square test). Innings from one match are not independent, so read p-values as a guide.</p>
+  <div class="grid">
+    <div class="card c12"><div class="hyp" id="hyp"></div></div>
+    <div class="card c6"><h3>Run rate by phase, winners against losers</h3><p class="hint">Runs per over in winning and losing innings</p><div class="legend"><span><i style="background:var(--s1)"></i>Winning innings</span><span><i style="background:var(--s2)"></i>Losing innings</span></div><div class="chart" data-chart="phaseGap"></div></div>
+    <div class="card c6"><h3>A powerplay collapse</h3><p class="hint">Win % of innings by wickets lost in overs 1 to 6</p><div class="chart" data-chart="collapse"></div></div>
+  </div>
+</section>
+
+<section id="p-index" role="tabpanel" hidden>
+  <h2 class="lead" id="ix-lead"></h2>
+  <p class="sub" id="ix-sub"></p>
+  <div class="chips" id="teamChips2" aria-label="Choose a franchise to highlight"></div>
+  <div class="grid">
+    <div class="card c7"><h3>Team Performance Index, all seasons</h3><p class="hint">Half batting, half bowling, in standard deviations from the average franchise. The diamond is the total.</p><div class="legend"><span><i style="background:var(--s1)"></i>Batting part</span><span><i style="background:var(--s2)"></i>Bowling part</span></div><div class="chart" data-chart="rank"></div><div id="tb-rank"></div></div>
+    <div class="card c5"><h3>Does the index agree with winning?</h3><p class="hint">Each dot is one franchise in one season (8+ matches). The index never used the result.</p><div class="chart" data-chart="valid"></div></div>
+    <div class="card c4"><h3>Average win % by tier</h3><p class="hint">Team-seasons grouped by index tier</p><div class="rows" id="tiers"></div></div>
+    <div class="card c4"><h3>Which skills move with winning</h3><p class="hint">Rank correlation with season win %</p><div class="legend"><span><i style="background:var(--s1)"></i>Batting</span><span><i style="background:var(--s2)"></i>Bowling</span></div><div class="rows" id="comp"></div></div>
+    <div class="card c4"><h3>How the index is built</h3><div class="take" style="gap:8px;margin-top:6px" id="how"></div></div>
+    <div class="card c12"><h3>Index by season</h3><p class="hint">0 is the average franchise of that season. The selected franchise is highlighted; hover a season for the league leader.</p><div class="chart" data-chart="traj"></div></div>
+  </div>
+</section>
+
+<section id="p-take" role="tabpanel" hidden>
+  <h2 class="lead">Win the death overs, protect the powerplay</h2>
+  <p class="sub">What the 17 seasons of ball-by-ball data say, and what to do about it.</p>
+  <div class="grid">
+    <div class="card c7"><h3 style="margin-bottom:12px">Business insights</h3><div class="take" id="insights"></div></div>
+    <div class="card c5 recs" id="recs"></div>
+  </div>
+  <p class="foot" id="foot"></p>
+</section>
+</main>
+</div>
+<div id="tip" role="tooltip"></div>
+
+<script>
+const D = {"headline":{"deliveries":260269,"matches":1090,"innings":2180,"legal":250845,"runs":346797,"wickets":12893,"fours":29770,"sixes":13009,"dot_pct":36.0,"run_rate":8.3,"dropped":5,"y0":2008,"y1":2024},"per_over":[{"over":1,"runs":6.106,"wkts":0.2},{"over":2,"runs":7.396,"wkts":0.229},{"over":3,"runs":8.178,"wkts":0.244},{"over":4,"runs":8.426,"wkts":0.25},{"over":5,"runs":8.499,"wkts":0.263},{"over":6,"runs":8.486,"wkts":0.246},{"over":7,"runs":6.795,"wkts":0.203},{"over":8,"runs":7.324,"wkts":0.217},{"over":9,"runs":7.617,"wkts":0.246},{"over":10,"runs":7.488,"wkts":0.228},{"over":11,"runs":7.682,"wkts":0.261},{"over":12,"runs":7.825,"wkts":0.259},{"over":13,"runs":7.884,"wkts":0.268},{"over":14,"runs":8.071,"wkts":0.289},{"over":15,"runs":8.316,"wkts":0.318},{"over":16,"runs":8.462,"wkts":0.337},{"over":17,"runs":8.704,"wkts":0.357},{"over":18,"runs":8.956,"wkts":0.447},{"over":19,"runs":8.728,"wkts":0.453},{"over":20,"runs":8.139,"wkts":0.599}],"phase":[{"phase":"Powerplay (1-6)","share":29.6,"rr":7.85,"dot":47.0,"bnd":19.6,"bpw":25.1},{"phase":"Middle (7-16)","share":48.7,"rr":7.9,"dot":31.9,"bnd":14.0,"bpw":22.4},{"phase":"Death (17-20)","share":21.7,"rr":10.23,"dot":28.2,"bnd":21.3,"bpw":10.9}],"dismissals":[{"kind":"caught","n":8033},{"kind":"bowled","n":2200},{"kind":"run out","n":1103},{"kind":"lbw","n":797},{"kind":"caught and bowled","n":366},{"kind":"stumped","n":358},{"kind":"retired hurt","n":15},{"kind":"hit wicket","n":15},{"kind":"obstructing the field","n":3},{"kind":"retired out","n":3}],"yearly":[{"year":2008,"rr":8.31,"bnd":18.0,"dot":38.0,"sixes":10.7,"matches":58},{"year":2009,"rr":7.48,"bnd":13.9,"dot":39.1,"sixes":8.9,"matches":57},{"year":2010,"rr":8.13,"bnd":16.5,"dot":35.8,"sixes":9.8,"matches":60},{"year":2011,"rr":7.74,"bnd":15.6,"dot":38.2,"sixes":8.8,"matches":72},{"year":2012,"rr":7.83,"bnd":15.4,"dot":36.3,"sixes":9.9,"matches":74},{"year":2013,"rr":7.68,"bnd":15.5,"dot":38.4,"sixes":8.9,"matches":76},{"year":2014,"rr":8.2,"bnd":16.5,"dot":36.3,"sixes":11.9,"matches":60},{"year":2015,"rr":8.35,"bnd":17.4,"dot":36.4,"sixes":11.9,"matches":57},{"year":2016,"rr":8.31,"bnd":16.7,"dot":34.1,"sixes":10.7,"matches":60},{"year":2017,"rr":8.41,"bnd":17.3,"dot":34.0,"sixes":11.9,"matches":59},{"year":2018,"rr":8.65,"bnd":18.3,"dot":34.4,"sixes":14.5,"matches":60},{"year":2019,"rr":8.4,"bnd":17.6,"dot":35.7,"sixes":13.2,"matches":59},{"year":2020,"rr":8.29,"bnd":16.5,"dot":34.7,"sixes":12.2,"matches":60},{"year":2021,"rr":8.05,"bnd":16.1,"dot":36.2,"sixes":11.4,"matches":60},{"year":2022,"rr":8.54,"bnd":18.0,"dot":37.1,"sixes":14.4,"matches":74},{"year":2023,"rr":9.01,"bnd":19.3,"dot":33.9,"sixes":15.3,"matches":73},{"year":2024,"rr":9.56,"bnd":21.1,"dot":32.9,"sixes":17.8,"matches":71}],"teams":[{"bat_rr":8.83,"runs_per_wkt":31.4,"bat_boundary_pct":18.25,"bat_dot_pct":31.54,"pp_rr":8.08,"mid_rr":8.37,"death_rr":11.37,"econ":8.61,"bowl_sr":18.69,"bowl_dot_pct":36.01,"extras_per_over":0.19,"pp_econ":8.39,"mid_econ":8.3,"death_econ":9.9,"batting_index":1.42,"bowling_index":-0.05,"performance_index":0.68,"team":"Gujarat Titans","matches":45,"wins":28,"win_pct":62.2,"tier":"Elite","profile":"Batting-led","strengths":["Avoiding dot balls","Death-over batting"],"weaknesses":["Powerplay bowling","Overall bowling economy"],"z":{"bat_rr":1.48,"pp_rr":0.65,"death_rr":1.65,"bat_boundary_pct":1.19,"bat_dot_pct":2.11,"econ":-1.32,"bowl_sr":1.59,"pp_econ":-1.33,"death_econ":0.63,"bowl_dot_pct":0.18}},{"bat_rr":8.39,"runs_per_wkt":31.07,"bat_boundary_pct":17.03,"bat_dot_pct":35.03,"pp_rr":7.72,"mid_rr":7.91,"death_rr":10.87,"econ":7.97,"bowl_sr":20.26,"bowl_dot_pct":36.44,"extras_per_over":0.23,"pp_econ":7.73,"mid_econ":7.52,"death_econ":9.7,"batting_index":0.26,"bowling_index":0.62,"performance_index":0.44,"team":"Chennai Super Kings","matches":237,"wins":138,"win_pct":58.2,"tier":"Strong","profile":"Bowling-led","strengths":["Death-over bowling","Death-over batting"],"weaknesses":["Powerplay batting","Powerplay bowling"],"z":{"bat_rr":0.31,"pp_rr":-0.42,"death_rr":0.97,"bat_boundary_pct":0.15,"bat_dot_pct":0.28,"econ":0.65,"bowl_sr":0.71,"pp_econ":0.08,"death_econ":1.14,"bowl_dot_pct":0.52}},{"bat_rr":8.8,"runs_per_wkt":27.45,"bat_boundary_pct":17.86,"bat_dot_pct":34.46,"pp_rr":7.94,"mid_rr":8.55,"death_rr":10.95,"econ":8.73,"bowl_sr":20.2,"bowl_dot_pct":35.46,"extras_per_over":0.26,"pp_econ":8.85,"mid_econ":7.93,"death_econ":10.72,"batting_index":0.83,"bowling_index":-1.0,"performance_index":-0.09,"team":"Lucknow Super Giants","matches":43,"wins":24,"win_pct":55.8,"tier":"Average","profile":"Batting-led","strengths":["Overall batting run rate","Death-over batting"],"weaknesses":["Powerplay bowling","Overall bowling economy"],"z":{"bat_rr":1.4,"pp_rr":0.23,"death_rr":1.09,"bat_boundary_pct":0.85,"bat_dot_pct":0.58,"econ":-1.71,"bowl_sr":0.74,"pp_econ":-2.32,"death_econ":-1.47,"bowl_dot_pct":-0.26}},{"bat_rr":8.36,"runs_per_wkt":26.87,"bat_boundary_pct":17.59,"bat_dot_pct":36.96,"pp_rr":7.78,"mid_rr":7.91,"death_rr":10.69,"econ":8.02,"bowl_sr":20.79,"bowl_dot_pct":36.56,"extras_per_over":0.24,"pp_econ":7.35,"mid_econ":7.89,"death_econ":9.6,"batting_index":0.12,"bowling_index":0.75,"performance_index":0.44,"team":"Mumbai Indians","matches":261,"wins":144,"win_pct":55.2,"tier":"Strong","profile":"Bowling-led","strengths":["Death-over bowling","Powerplay bowling"],"weaknesses":["Avoiding dot balls","Powerplay batting"],"z":{"bat_rr":0.24,"pp_rr":-0.25,"death_rr":0.73,"bat_boundary_pct":0.63,"bat_dot_pct":-0.73,"econ":0.48,"bowl_sr":0.41,"pp_econ":0.87,"death_econ":1.39,"bowl_dot_pct":0.61}},{"bat_rr":8.31,"runs_per_wkt":26.43,"bat_boundary_pct":17.46,"bat_dot_pct":36.97,"pp_rr":7.91,"mid_rr":7.95,"death_rr":10.18,"econ":8.02,"bowl_sr":21.55,"bowl_dot_pct":36.22,"extras_per_over":0.21,"pp_econ":7.75,"mid_econ":7.55,"death_econ":9.89,"batting_index":0.01,"bowling_index":0.3,"performance_index":0.16,"team":"Kolkata Knight Riders","matches":251,"wins":131,"win_pct":52.2,"tier":"Strong","profile":"Balanced","strengths":["Death-over bowling","Boundary hitting"],"weaknesses":["Avoiding dot balls","Wicket taking"],"z":{"bat_rr":0.1,"pp_rr":0.14,"death_rr":0.03,"bat_boundary_pct":0.51,"bat_dot_pct":-0.74,"econ":0.5,"bowl_sr":-0.01,"pp_econ":0.02,"death_econ":0.66,"bowl_dot_pct":0.34}},{"bat_rr":8.23,"runs_per_wkt":26.49,"bat_boundary_pct":17.07,"bat_dot_pct":36.67,"pp_rr":7.72,"mid_rr":7.97,"death_rr":9.9,"econ":8.13,"bowl_sr":22.08,"bowl_dot_pct":35.59,"extras_per_over":0.25,"pp_econ":7.51,"mid_econ":7.77,"death_econ":10.28,"batting_index":-0.26,"bowling_index":-0.03,"performance_index":-0.14,"team":"Rajasthan Royals","matches":219,"wins":112,"win_pct":51.1,"tier":"Average","profile":"Balanced","strengths":["Powerplay bowling","Boundary hitting"],"weaknesses":["Avoiding dot balls","Powerplay batting"],"z":{"bat_rr":-0.12,"pp_rr":-0.41,"death_rr":-0.36,"bat_boundary_pct":0.18,"bat_dot_pct":-0.58,"econ":0.14,"bowl_sr":-0.31,"pp_econ":0.53,"death_econ":-0.35,"bowl_dot_pct":-0.15}},{"bat_rr":8.09,"runs_per_wkt":28.69,"bat_boundary_pct":15.61,"bat_dot_pct":33.8,"pp_rr":7.91,"mid_rr":7.42,"death_rr":10.4,"econ":7.86,"bowl_sr":20.12,"bowl_dot_pct":36.17,"extras_per_over":0.22,"pp_econ":7.85,"mid_econ":7.06,"death_econ":10.18,"batting_index":-0.04,"bowling_index":0.36,"performance_index":0.16,"team":"Rising Pune Supergiant","matches":30,"wins":15,"win_pct":50.0,"tier":"Strong","profile":"Bowling-led","strengths":["Overall bowling economy","Avoiding dot balls"],"weaknesses":["Boundary hitting","Overall batting run rate"],"z":{"bat_rr":-0.5,"pp_rr":0.12,"death_rr":0.32,"bat_boundary_pct":-1.06,"bat_dot_pct":0.92,"econ":0.97,"bowl_sr":0.79,"pp_econ":-0.2,"death_econ":-0.09,"bowl_dot_pct":0.3}},{"bat_rr":8.41,"runs_per_wkt":27.45,"bat_boundary_pct":17.33,"bat_dot_pct":35.76,"pp_rr":7.7,"mid_rr":8.05,"death_rr":10.74,"econ":8.27,"bowl_sr":21.26,"bowl_dot_pct":35.86,"extras_per_over":0.24,"pp_econ":7.75,"mid_econ":7.91,"death_econ":10.29,"batting_index":0.19,"bowling_index":-0.08,"performance_index":0.06,"team":"Royal Challengers Bengaluru","matches":252,"wins":123,"win_pct":48.8,"tier":"Average","profile":"Balanced","strengths":["Death-over batting","Boundary hitting"],"weaknesses":["Powerplay batting","Death-over bowling"],"z":{"bat_rr":0.36,"pp_rr":-0.49,"death_rr":0.79,"bat_boundary_pct":0.41,"bat_dot_pct":-0.1,"econ":-0.28,"bowl_sr":0.15,"pp_econ":0.03,"death_econ":-0.35,"bowl_dot_pct":0.06}},{"bat_rr":8.28,"runs_per_wkt":27.55,"bat_boundary_pct":16.37,"bat_dot_pct":34.51,"pp_rr":8.16,"mid_rr":7.79,"death_rr":9.88,"econ":8.17,"bowl_sr":21.35,"bowl_dot_pct":35.94,"extras_per_over":0.2,"pp_econ":7.66,"mid_econ":7.91,"death_econ":9.8,"batting_index":0.13,"bowling_index":0.27,"performance_index":0.2,"team":"Sunrisers Hyderabad","matches":182,"wins":88,"win_pct":48.4,"tier":"Strong","profile":"Balanced","strengths":["Death-over bowling","Powerplay batting"],"weaknesses":["Boundary hitting","Death-over batting"],"z":{"bat_rr":0.02,"pp_rr":0.88,"death_rr":-0.38,"bat_boundary_pct":-0.41,"bat_dot_pct":0.55,"econ":0.02,"bowl_sr":0.1,"pp_econ":0.22,"death_econ":0.88,"bowl_dot_pct":0.13}},{"bat_rr":8.19,"runs_per_wkt":25.76,"bat_boundary_pct":16.93,"bat_dot_pct":35.88,"pp_rr":7.97,"mid_rr":7.72,"death_rr":10.04,"econ":8.18,"bowl_sr":21.46,"bowl_dot_pct":35.51,"extras_per_over":0.22,"pp_econ":7.73,"mid_econ":7.81,"death_econ":10.03,"batting_index":-0.03,"bowling_index":0.03,"performance_index":0.0,"team":"Delhi Capitals","matches":250,"wins":115,"win_pct":46.0,"tier":"Average","profile":"Balanced","strengths":["Powerplay batting","Death-over bowling"],"weaknesses":["Dot-ball bowling","Overall batting run rate"],"z":{"bat_rr":-0.22,"pp_rr":0.31,"death_rr":-0.17,"bat_boundary_pct":0.07,"bat_dot_pct":-0.17,"econ":-0.02,"bowl_sr":0.04,"pp_econ":0.08,"death_econ":0.29,"bowl_dot_pct":-0.22}},{"bat_rr":8.35,"runs_per_wkt":25.99,"bat_boundary_pct":17.37,"bat_dot_pct":36.07,"pp_rr":7.96,"mid_rr":8.1,"death_rr":9.78,"econ":8.37,"bowl_sr":21.7,"bowl_dot_pct":35.25,"extras_per_over":0.23,"pp_econ":7.89,"mid_econ":7.98,"death_econ":10.41,"batting_index":0.03,"bowling_index":-0.41,"performance_index":-0.19,"team":"Punjab Kings","matches":246,"wins":112,"win_pct":45.5,"tier":"Struggling","profile":"Batting-led","strengths":["Boundary hitting","Powerplay batting"],"weaknesses":["Death-over bowling","Overall bowling economy"],"z":{"bat_rr":0.22,"pp_rr":0.28,"death_rr":-0.52,"bat_boundary_pct":0.44,"bat_dot_pct":-0.27,"econ":-0.6,"bowl_sr":-0.1,"pp_econ":-0.28,"death_econ":-0.66,"bowl_dot_pct":-0.42}},{"bat_rr":8.49,"runs_per_wkt":25.83,"bat_boundary_pct":17.91,"bat_dot_pct":33.59,"pp_rr":8.63,"mid_rr":8.07,"death_rr":9.51,"econ":8.72,"bowl_sr":26.27,"bowl_dot_pct":31.81,"extras_per_over":0.17,"pp_econ":8.16,"mid_econ":8.34,"death_econ":10.98,"batting_index":0.77,"bowling_index":-2.09,"performance_index":-0.66,"team":"Gujarat Lions","matches":30,"wins":13,"win_pct":43.3,"tier":"Struggling","profile":"Batting-led","strengths":["Powerplay batting","Avoiding dot balls"],"weaknesses":["Dot-ball bowling","Wicket taking"],"z":{"bat_rr":0.57,"pp_rr":2.25,"death_rr":-0.88,"bat_boundary_pct":0.9,"bat_dot_pct":1.04,"econ":-1.68,"bowl_sr":-2.66,"pp_econ":-0.84,"death_econ":-2.14,"bowl_dot_pct":-3.12}},{"bat_rr":7.86,"runs_per_wkt":23.68,"bat_boundary_pct":15.51,"bat_dot_pct":36.87,"pp_rr":7.59,"mid_rr":7.42,"death_rr":9.52,"econ":7.81,"bowl_sr":21.35,"bowl_dot_pct":37.96,"extras_per_over":0.23,"pp_econ":7.0,"mid_econ":7.37,"death_econ":10.49,"batting_index":-0.92,"bowling_index":0.74,"performance_index":-0.09,"team":"Deccan Chargers","matches":75,"wins":29,"win_pct":38.7,"tier":"Average","profile":"Bowling-led","strengths":["Dot-ball bowling","Powerplay bowling"],"weaknesses":["Boundary hitting","Overall batting run rate"],"z":{"bat_rr":-1.1,"pp_rr":-0.8,"death_rr":-0.87,"bat_boundary_pct":-1.15,"bat_dot_pct":-0.69,"econ":1.14,"bowl_sr":0.1,"pp_econ":1.61,"death_econ":-0.88,"bowl_dot_pct":1.71}},{"bat_rr":7.23,"runs_per_wkt":21.34,"bat_boundary_pct":13.67,"bat_dot_pct":39.79,"pp_rr":7.02,"mid_rr":6.94,"death_rr":8.4,"econ":7.62,"bowl_sr":24.31,"bowl_dot_pct":36.19,"extras_per_over":0.16,"pp_econ":7.04,"mid_econ":7.2,"death_econ":9.78,"batting_index":-2.52,"bowling_index":0.59,"performance_index":-0.97,"team":"Pune Warriors","matches":45,"wins":12,"win_pct":26.7,"tier":"Struggling","profile":"Bowling-led","strengths":["Overall bowling economy","Powerplay bowling"],"weaknesses":["Overall batting run rate","Boundary hitting"],"z":{"bat_rr":-2.77,"pp_rr":-2.49,"death_rr":-2.41,"bat_boundary_pct":-2.71,"bat_dot_pct":-2.22,"econ":1.71,"bowl_sr":-1.56,"pp_econ":1.53,"death_econ":0.92,"bowl_dot_pct":0.32}}],"labels":{"bat_rr":"Overall batting run rate","pp_rr":"Powerplay batting","death_rr":"Death-over batting","bat_boundary_pct":"Boundary hitting","bat_dot_pct":"Avoiding dot balls","econ":"Overall bowling economy","bowl_sr":"Wicket taking","pp_econ":"Powerplay bowling","death_econ":"Death-over bowling","bowl_dot_pct":"Dot-ball bowling"},"role":[{"team":"Chennai Super Kings","win_first":53.8,"win_chase":63.6,"rr_first":8.54,"rr_chase":8.2},{"team":"Mumbai Indians","win_first":53.7,"win_chase":56.7,"rr_first":8.34,"rr_chase":8.44},{"team":"Kolkata Knight Riders","win_first":44.2,"win_chase":59.5,"rr_first":8.35,"rr_chase":8.34},{"team":"Rajasthan Royals","win_first":43.7,"win_chase":57.8,"rr_first":8.23,"rr_chase":8.22},{"team":"Royal Challengers Bengaluru","win_first":45.3,"win_chase":52.4,"rr_first":8.59,"rr_chase":8.29},{"team":"Sunrisers Hyderabad","win_first":46.8,"win_chase":50.0,"rr_first":8.45,"rr_chase":8.19},{"team":"Delhi Capitals","win_first":43.2,"win_chase":48.2,"rr_first":8.22,"rr_chase":8.22},{"team":"Punjab Kings","win_first":39.8,"win_chase":51.7,"rr_first":8.29,"rr_chase":8.48},{"team":"Deccan Chargers","win_first":41.9,"win_chase":34.4,"rr_first":7.89,"rr_chase":7.84}],"mix":[{"team":"Gujarat Titans","caught":66.1,"bowled":13.1,"lbw":7.4,"run out":7.4,"stumped":2.3},{"team":"Chennai Super Kings","caught":64.5,"bowled":15.4,"lbw":6.4,"run out":8.1,"stumped":2.5},{"team":"Lucknow Super Giants","caught":72.7,"bowled":13.6,"lbw":3.4,"run out":5.7,"stumped":2.7},{"team":"Mumbai Indians","caught":61.1,"bowled":17.7,"lbw":6.4,"run out":8.1,"stumped":2.6},{"team":"Kolkata Knight Riders","caught":58.4,"bowled":18.8,"lbw":7.3,"run out":9.0,"stumped":3.4},{"team":"Rajasthan Royals","caught":61.9,"bowled":16.4,"lbw":5.6,"run out":8.9,"stumped":3.3},{"team":"Rising Pune Supergiant","caught":57.1,"bowled":16.4,"lbw":8.5,"run out":10.1,"stumped":3.7},{"team":"Royal Challengers Bengaluru","caught":64.4,"bowled":15.7,"lbw":5.7,"run out":8.4,"stumped":3.0},{"team":"Sunrisers Hyderabad","caught":63.6,"bowled":17.2,"lbw":7.0,"run out":8.2,"stumped":1.6},{"team":"Delhi Capitals","caught":61.6,"bowled":17.5,"lbw":5.0,"run out":10.0,"stumped":3.2},{"team":"Punjab Kings","caught":62.1,"bowled":19.2,"lbw":5.8,"run out":7.7,"stumped":2.1},{"team":"Gujarat Lions","caught":61.7,"bowled":14.1,"lbw":7.4,"run out":12.1,"stumped":2.0},{"team":"Deccan Chargers","caught":60.8,"bowled":18.4,"lbw":5.8,"run out":8.5,"stumped":3.8},{"team":"Pune Warriors","caught":65.1,"bowled":15.7,"lbw":6.8,"run out":7.7,"stumped":3.0}],"tests":{"h1":{"a":8.89,"b":7.74,"na":1090,"nb":1090,"t":18.87,"p":1.125285324671605e-73,"d":0.81},"h2":{"a":34.08,"b":38.04,"na":1090,"nb":1090,"t":-12.81,"p":3.1026789183442146e-36,"d":-0.55},"h3":{"a":8.36,"b":8.28,"na":1090,"nb":1090,"t":1.19,"p":0.23271623895086585,"d":0.05},"h4":{"chi2":107.57,"p":3.34045188717554e-25,"win_collapse":24.7,"win_ok":54.9,"n_collapse":356,"n_ok":1824},"h5":{"a":7.97,"b":8.62,"na":1028,"nb":1152,"t":-10.03,"p":3.722057204111436e-23,"d":-0.43},"h6":{"F":0.62,"p":0.7391245214579011,"k":8},"h7":[{"phase":"Powerplay","win":8.33,"loss":7.37,"diff":0.96,"p":2.828657093030167e-27,"d":0.47},{"phase":"Middle overs","win":8.44,"loss":7.41,"diff":1.03,"p":1.0174566154009655e-39,"d":0.58},{"phase":"Death overs","win":11.54,"loss":9.05,"diff":2.49,"p":2.1362991379322324e-56,"d":0.73}]},"validation":{"n":146,"rho":0.73,"p":2.7494386399251786e-25,"rho_bat":0.47,"rho_bowl":0.48,"r2":0.56,"coef":[49.3,9.7,11.2],"tiers":[{"tier":"Elite","win":64.7,"n":20},{"tier":"Strong","win":56.1,"n":40},{"tier":"Average","win":48.9,"n":32},{"tier":"Struggling","win":38.8,"n":54}],"comp":[{"key":"pp_econ","label":"Powerplay bowling","rho":0.17,"side":"bowl"},{"key":"pp_rr","label":"Powerplay batting","rho":0.25,"side":"bat"},{"key":"death_rr","label":"Death-over batting","rho":0.31,"side":"bat"},{"key":"bowl_dot_pct","label":"Dot-ball bowling","rho":0.31,"side":"bowl"},{"key":"bat_boundary_pct","label":"Boundary hitting","rho":0.35,"side":"bat"},{"key":"bat_dot_pct","label":"Avoiding dot balls","rho":0.35,"side":"bat"},{"key":"econ","label":"Overall bowling economy","rho":0.36,"side":"bowl"},{"key":"death_econ","label":"Death-over bowling","rho":0.39,"side":"bowl"},{"key":"bat_rr","label":"Overall batting run rate","rho":0.45,"side":"bat"},{"key":"bowl_sr","label":"Wicket taking","rho":0.52,"side":"bowl"}],"points":[{"team":"Chennai Super Kings","year":2008,"perf":-0.05,"bat":0.23,"bowl":-0.33,"win":56.2},{"team":"Chennai Super Kings","year":2009,"perf":0.44,"bat":1.25,"bowl":-0.38,"win":57.1},{"team":"Chennai Super Kings","year":2010,"perf":0.43,"bat":0.23,"bowl":0.62,"win":56.2},{"team":"Chennai Super Kings","year":2011,"perf":0.34,"bat":0.68,"bowl":-0.0,"win":68.8},{"team":"Chennai Super Kings","year":2012,"perf":0.33,"bat":0.55,"bowl":0.11,"win":55.6},{"team":"Chennai Super Kings","year":2013,"perf":0.59,"bat":1.04,"bowl":0.15,"win":66.7},{"team":"Chennai Super Kings","year":2014,"perf":0.49,"bat":0.86,"bowl":0.13,"win":62.5},{"team":"Chennai Super Kings","year":2015,"perf":0.44,"bat":-0.29,"bowl":1.16,"win":58.8},{"team":"Chennai Super Kings","year":2018,"perf":0.29,"bat":0.53,"bowl":0.05,"win":68.8},{"team":"Chennai Super Kings","year":2019,"perf":-0.25,"bat":-1.64,"bowl":1.13,"win":58.8},{"team":"Chennai Super Kings","year":2020,"perf":-0.43,"bat":-0.56,"bowl":-0.3,"win":42.9},{"team":"Chennai Super Kings","year":2021,"perf":0.61,"bat":1.37,"bowl":-0.15,"win":68.8},{"team":"Chennai Super Kings","year":2022,"perf":-0.66,"bat":-0.67,"bowl":-0.66,"win":28.6},{"team":"Chennai Super Kings","year":2023,"perf":0.59,"bat":0.77,"bowl":0.41,"win":66.7},{"team":"Chennai Super Kings","year":2024,"perf":0.36,"bat":0.03,"bowl":0.7,"win":50.0},{"team":"Deccan Chargers","year":2008,"perf":-0.61,"bat":0.21,"bowl":-1.44,"win":14.3},{"team":"Deccan Chargers","year":2009,"perf":0.44,"bat":0.71,"bowl":0.17,"win":56.2},{"team":"Deccan Chargers","year":2010,"perf":-0.6,"bat":-1.52,"bowl":0.32,"win":50.0},{"team":"Deccan Chargers","year":2011,"perf":0.39,"bat":0.09,"bowl":0.7,"win":42.9},{"team":"Deccan Chargers","year":2012,"perf":-0.21,"bat":0.39,"bowl":-0.8,"win":26.7},{"team":"Delhi Capitals","year":2008,"perf":0.18,"bat":0.59,"bowl":-0.23,"win":50.0},{"team":"Delhi Capitals","year":2009,"perf":0.6,"bat":0.83,"bowl":0.36,"win":66.7},{"team":"Delhi Capitals","year":2010,"perf":0.39,"bat":-0.01,"bowl":0.79,"win":50.0},{"team":"Delhi Capitals","year":2011,"perf":-0.52,"bat":0.24,"bowl":-1.27,"win":30.8},{"team":"Delhi Capitals","year":2012,"perf":0.25,"bat":0.7,"bowl":-0.21,"win":61.1},{"team":"Delhi Capitals","year":2013,"perf":-1.02,"bat":-0.88,"bowl":-1.16,"win":18.8},{"team":"Delhi Capitals","year":2014,"perf":-0.99,"bat":-0.6,"bowl":-1.38,"win":14.3},{"team":"Delhi Capitals","year":2015,"perf":0.03,"bat":-0.86,"bowl":0.93,"win":38.5},{"team":"Delhi Capitals","year":2016,"perf":-0.3,"bat":-0.75,"bowl":0.14,"win":50.0},{"team":"Delhi Capitals","year":2017,"perf":-0.12,"bat":0.01,"bowl":-0.26,"win":42.9},{"team":"Delhi Capitals","year":2018,"perf":0.11,"bat":0.86,"bowl":-0.65,"win":35.7},{"team":"Delhi Capitals","year":2019,"perf":0.21,"bat":-0.22,"bowl":0.63,"win":62.5},{"team":"Delhi Capitals","year":2020,"perf":-0.01,"bat":-0.14,"bowl":0.11,"win":52.9},{"team":"Delhi Capitals","year":2021,"perf":0.72,"bat":0.83,"bowl":0.6,"win":62.5},{"team":"Delhi Capitals","year":2022,"perf":0.49,"bat":1.01,"bowl":-0.03,"win":50.0},{"team":"Delhi Capitals","year":2023,"perf":-0.71,"bat":-1.68,"bowl":0.26,"win":35.7},{"team":"Delhi Capitals","year":2024,"perf":-0.39,"bat":0.24,"bowl":-1.01,"win":50.0},{"team":"Gujarat Lions","year":2016,"perf":-0.34,"bat":-0.15,"bowl":-0.53,"win":56.2},{"team":"Gujarat Lions","year":2017,"perf":-0.44,"bat":0.99,"bowl":-1.87,"win":28.6},{"team":"Gujarat Titans","year":2022,"perf":0.36,"bat":0.13,"bowl":0.58,"win":75.0},{"team":"Gujarat Titans","year":2023,"perf":0.96,"bat":0.66,"bowl":1.27,"win":64.7},{"team":"Gujarat Titans","year":2024,"perf":-0.47,"bat":-0.93,"bowl":-0.01,"win":41.7},{"team":"Kochi Tuskers Kerala","year":2011,"perf":0.06,"bat":-0.05,"bowl":0.18,"win":42.9},{"team":"Kolkata Knight Riders","year":2008,"perf":0.12,"bat":-0.68,"bowl":0.91,"win":46.2},{"team":"Kolkata Knight Riders","year":2009,"perf":-0.92,"bat":-0.32,"bowl":-1.51,"win":23.1},{"team":"Kolkata Knight Riders","year":2010,"perf":-0.64,"bat":-0.78,"bowl":-0.49,"win":50.0},{"team":"Kolkata Knight Riders","year":2011,"perf":0.07,"bat":-0.22,"bowl":0.36,"win":53.3},{"team":"Kolkata Knight Riders","year":2012,"perf":0.65,"bat":0.08,"bowl":1.23,"win":70.6},{"team":"Kolkata Knight Riders","year":2013,"perf":0.11,"bat":-0.26,"bowl":0.48,"win":37.5},{"team":"Kolkata Knight Riders","year":2014,"perf":0.7,"bat":0.2,"bowl":1.21,"win":68.8},{"team":"Kolkata Knight Riders","year":2015,"perf":0.35,"bat":0.8,"bowl":-0.11,"win":53.8},{"team":"Kolkata Knight Riders","year":2016,"perf":0.59,"bat":0.23,"bowl":0.95,"win":53.3},{"team":"Kolkata Knight Riders","year":2017,"perf":0.19,"bat":0.31,"bowl":0.07,"win":56.2},{"team":"Kolkata Knight Riders","year":2018,"perf":0.08,"bat":0.56,"bowl":-0.39,"win":56.2},{"team":"Kolkata Knight Riders","year":2019,"perf":-0.13,"bat":0.83,"bowl":-1.08,"win":42.9},{"team":"Kolkata Knight Riders","year":2020,"perf":-0.41,"bat":-0.81,"bowl":-0.0,"win":50.0},{"team":"Kolkata Knight Riders","year":2021,"perf":0.09,"bat":-0.24,"bowl":0.43,"win":52.9},{"team":"Kolkata Knight Riders","year":2022,"perf":-0.24,"bat":-0.52,"bowl":0.04,"win":42.9},{"team":"Kolkata Knight Riders","year":2023,"perf":-0.52,"bat":-0.35,"bowl":-0.7,"win":42.9},{"team":"Kolkata Knight Riders","year":2024,"perf":1.3,"bat":1.51,"bowl":1.1,"win":78.6},{"team":"Lucknow Super Giants","year":2022,"perf":0.52,"bat":0.58,"bowl":0.47,"win":60.0},{"team":"Lucknow Super Giants","year":2023,"perf":-0.13,"bat":-0.83,"bowl":0.58,"win":57.1},{"team":"Lucknow Super Giants","year":2024,"perf":-0.71,"bat":-0.8,"bowl":-0.62,"win":50.0},{"team":"Mumbai Indians","year":2008,"perf":0.24,"bat":-0.14,"bowl":0.63,"win":50.0},{"team":"Mumbai Indians","year":2009,"perf":0.3,"bat":-0.14,"bowl":0.74,"win":38.5},{"team":"Mumbai Indians","year":2010,"perf":0.98,"bat":1.45,"bowl":0.51,"win":68.8},{"team":"Mumbai Indians","year":2011,"perf":0.36,"bat":-0.23,"bowl":0.94,"win":62.5},{"team":"Mumbai Indians","year":2012,"perf":-0.06,"bat":-1.17,"bowl":1.04,"win":58.8},{"team":"Mumbai Indians","year":2013,"perf":0.43,"bat":0.37,"bowl":0.49,"win":68.4},{"team":"Mumbai Indians","year":2014,"perf":-0.13,"bat":-0.51,"bowl":0.25,"win":46.7},{"team":"Mumbai Indians","year":2015,"perf":-0.1,"bat":0.48,"bowl":-0.67,"win":62.5},{"team":"Mumbai Indians","year":2016,"perf":-0.37,"bat":-0.57,"bowl":-0.16,"win":50.0},{"team":"Mumbai Indians","year":2017,"perf":0.59,"bat":0.26,"bowl":0.92,"win":70.6},{"team":"Mumbai Indians","year":2018,"perf":0.21,"bat":-0.53,"bowl":0.96,"win":42.9},{"team":"Mumbai Indians","year":2019,"perf":0.42,"bat":0.26,"bowl":0.59,"win":68.8},{"team":"Mumbai Indians","year":2020,"perf":1.53,"bat":1.68,"bowl":1.37,"win":68.8},{"team":"Mumbai Indians","year":2021,"perf":0.3,"bat":0.05,"bowl":0.55,"win":50.0},{"team":"Mumbai Indians","year":2022,"perf":-0.15,"bat":-0.69,"bowl":0.39,"win":28.6},{"team":"Mumbai Indians","year":2023,"perf":-0.06,"bat":0.81,"bowl":-0.93,"win":56.2},{"team":"Mumbai Indians","year":2024,"perf":-0.16,"bat":-0.23,"bowl":-0.09,"win":28.6},{"team":"Pune Warriors","year":2011,"perf":-0.29,"bat":-0.95,"bowl":0.37,"win":30.8},{"team":"Pune Warriors","year":2012,"perf":-0.8,"bat":-0.98,"bowl":-0.61,"win":25.0},{"team":"Pune Warriors","year":2013,"perf":-1.02,"bat":-0.89,"bowl":-1.16,"win":25.0},{"team":"Punjab Kings","year":2008,"perf":0.5,"bat":0.97,"bowl":0.04,"win":66.7},{"team":"Punjab Kings","year":2009,"perf":-0.33,"bat":-0.72,"bowl":0.07,"win":50.0},{"team":"Punjab Kings","year":2010,"perf":-0.34,"bat":0.63,"bowl":-1.31,"win":28.6},{"team":"Punjab Kings","year":2011,"perf":-0.09,"bat":0.3,"bowl":-0.48,"win":50.0},{"team":"Punjab Kings","year":2012,"perf":-0.18,"bat":-0.59,"bowl":0.22,"win":50.0},{"team":"Punjab Kings","year":2013,"perf":0.3,"bat":0.6,"bowl":0.0,"win":50.0},{"team":"Punjab Kings","year":2014,"perf":0.48,"bat":1.32,"bowl":-0.37,"win":70.6},{"team":"Punjab Kings","year":2015,"perf":-1.16,"bat":-1.3,"bowl":-1.03,"win":21.4},{"team":"Punjab Kings","year":2016,"perf":-0.51,"bat":-0.5,"bowl":-0.52,"win":28.6},{"team":"Punjab Kings","year":2017,"perf":-0.25,"bat":0.04,"bowl":-0.54,"win":50.0},{"team":"Punjab Kings","year":2018,"perf":-0.37,"bat":-0.32,"bowl":-0.42,"win":42.9},{"team":"Punjab Kings","year":2019,"perf":-0.52,"bat":0.18,"bowl":-1.22,"win":42.9},{"team":"Punjab Kings","year":2020,"perf":-0.19,"bat":0.29,"bowl":-0.66,"win":42.9},{"team":"Punjab Kings","year":2021,"perf":-0.21,"bat":-0.52,"bowl":0.09,"win":42.9},{"team":"Punjab Kings","year":2022,"perf":0.21,"bat":0.26,"bowl":0.17,"win":50.0},{"team":"Punjab Kings","year":2023,"perf":-0.36,"bat":0.24,"bowl":-0.96,"win":42.9},{"team":"Punjab Kings","year":2024,"perf":-0.14,"bat":-0.59,"bowl":0.31,"win":35.7},{"team":"Rajasthan Royals","year":2008,"perf":0.61,"bat":0.3,"bowl":0.92,"win":81.2},{"team":"Rajasthan Royals","year":2009,"perf":-0.14,"bat":-1.44,"bowl":1.16,"win":46.2},{"team":"Rajasthan Royals","year":2010,"perf":-0.54,"bat":-0.17,"bowl":-0.9,"win":42.9},{"team":"Rajasthan Royals","year":2011,"perf":-0.77,"bat":-1.19,"bowl":-0.35,"win":46.2},{"team":"Rajasthan Royals","year":2012,"perf":0.21,"bat":0.35,"bowl":0.07,"win":43.8},{"team":"Rajasthan Royals","year":2013,"perf":0.19,"bat":0.02,"bowl":0.36,"win":61.1},{"team":"Rajasthan Royals","year":2014,"perf":-0.19,"bat":-0.27,"bowl":-0.1,"win":50.0},{"team":"Rajasthan Royals","year":2015,"perf":-0.14,"bat":0.03,"bowl":-0.31,"win":53.8},{"team":"Rajasthan Royals","year":2018,"perf":-0.34,"bat":-0.44,"bowl":-0.25,"win":46.7},{"team":"Rajasthan Royals","year":2019,"perf":-0.19,"bat":-0.05,"bowl":-0.32,"win":38.5},{"team":"Rajasthan Royals","year":2020,"perf":-0.66,"bat":0.15,"bowl":-1.46,"win":42.9},{"team":"Rajasthan Royals","year":2021,"perf":-1.05,"bat":-0.41,"bowl":-1.68,"win":35.7},{"team":"Rajasthan Royals","year":2022,"perf":0.36,"bat":0.69,"bowl":0.03,"win":58.8},{"team":"Rajasthan Royals","year":2023,"perf":0.37,"bat":0.75,"bowl":-0.0,"win":50.0},{"team":"Rajasthan Royals","year":2024,"perf":0.02,"bat":-0.71,"bowl":0.76,"win":60.0},{"team":"Rising Pune Supergiant","year":2016,"perf":-0.12,"bat":-0.12,"bowl":-0.11,"win":35.7},{"team":"Rising Pune Supergiant","year":2017,"perf":0.33,"bat":-0.31,"bowl":0.97,"win":62.5},{"team":"Royal Challengers Bengaluru","year":2008,"perf":-0.99,"bat":-1.48,"bowl":-0.51,"win":28.6},{"team":"Royal Challengers Bengaluru","year":2009,"perf":-0.39,"bat":-0.16,"bowl":-0.61,"win":56.2},{"team":"Royal Challengers Bengaluru","year":2010,"perf":0.32,"bat":0.17,"bowl":0.47,"win":50.0},{"team":"Royal Challengers Bengaluru","year":2011,"perf":0.45,"bat":1.33,"bowl":-0.42,"win":62.5},{"team":"Royal Challengers Bengaluru","year":2012,"perf":-0.19,"bat":0.67,"bowl":-1.05,"win":53.3},{"team":"Royal Challengers Bengaluru","year":2013,"perf":0.4,"bat":1.14,"bowl":-0.35,"win":56.2},{"team":"Royal Challengers Bengaluru","year":2014,"perf":-0.44,"bat":-0.79,"bowl":-0.09,"win":35.7},{"team":"Royal Challengers Bengaluru","year":2015,"perf":0.69,"bat":1.07,"bowl":0.32,"win":57.1},{"team":"Royal Challengers Bengaluru","year":2016,"perf":0.58,"bat":2.0,"bowl":-0.84,"win":56.2},{"team":"Royal Challengers Bengaluru","year":2017,"perf":-0.83,"bat":-1.82,"bowl":0.16,"win":23.1},{"team":"Royal Challengers Bengaluru","year":2018,"perf":0.04,"bat":0.43,"bowl":-0.34,"win":42.9},{"team":"Royal Challengers Bengaluru","year":2019,"perf":-0.15,"bat":0.15,"bowl":-0.45,"win":38.5},{"team":"Royal Challengers Bengaluru","year":2020,"perf":-0.04,"bat":-0.51,"bowl":0.42,"win":46.7},{"team":"Royal Challengers Bengaluru","year":2021,"perf":0.07,"bat":-0.09,"bowl":0.23,"win":60.0},{"team":"Royal Challengers Bengaluru","year":2022,"perf":-0.36,"bat":-0.35,"bowl":-0.36,"win":56.2},{"team":"Royal Challengers Bengaluru","year":2023,"perf":0.42,"bat":0.37,"bowl":0.47,"win":50.0},{"team":"Royal Challengers Bengaluru","year":2024,"perf":0.26,"bat":0.83,"bowl":-0.31,"win":46.7},{"team":"Sunrisers Hyderabad","year":2013,"perf":0.02,"bat":-1.14,"bowl":1.18,"win":58.8},{"team":"Sunrisers Hyderabad","year":2014,"perf":0.08,"bat":-0.21,"bowl":0.36,"win":42.9},{"team":"Sunrisers Hyderabad","year":2015,"perf":-0.11,"bat":0.08,"bowl":-0.3,"win":50.0},{"team":"Sunrisers Hyderabad","year":2016,"perf":0.47,"bat":-0.14,"bowl":1.07,"win":64.7},{"team":"Sunrisers Hyderabad","year":2017,"perf":0.53,"bat":0.5,"bowl":0.55,"win":57.1},{"team":"Sunrisers Hyderabad","year":2018,"perf":-0.02,"bat":-1.09,"bowl":1.04,"win":58.8},{"team":"Sunrisers Hyderabad","year":2019,"perf":0.61,"bat":0.49,"bowl":0.73,"win":40.0},{"team":"Sunrisers Hyderabad","year":2020,"perf":0.21,"bat":-0.11,"bowl":0.53,"win":50.0},{"team":"Sunrisers Hyderabad","year":2021,"perf":-0.53,"bat":-0.99,"bowl":-0.07,"win":21.4},{"team":"Sunrisers Hyderabad","year":2022,"perf":-0.53,"bat":-0.44,"bowl":-0.62,"win":42.9},{"team":"Sunrisers Hyderabad","year":2023,"perf":-0.56,"bat":-0.74,"bowl":-0.38,"win":28.6},{"team":"Sunrisers Hyderabad","year":2024,"perf":-0.08,"bat":0.68,"bowl":-0.83,"win":56.2}]},"traj":{"years":[2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024],"series":[{"team":"Chennai Super Kings","v":[-0.05,0.44,0.43,0.34,0.33,0.59,0.49,0.44,null,null,0.29,-0.25,-0.43,0.61,-0.66,0.59,0.36]},{"team":"Delhi Capitals","v":[0.18,0.6,0.39,-0.52,0.25,-1.02,-0.99,0.03,-0.3,-0.12,0.11,0.21,-0.01,0.72,0.49,-0.71,-0.39]},{"team":"Kolkata Knight Riders","v":[0.12,-0.92,-0.64,0.07,0.65,0.11,0.7,0.35,0.59,0.19,0.08,-0.13,-0.41,0.09,-0.24,-0.52,1.3]},{"team":"Mumbai Indians","v":[0.24,0.3,0.98,0.36,-0.06,0.43,-0.13,-0.1,-0.37,0.59,0.21,0.42,1.53,0.3,-0.15,-0.06,-0.16]},{"team":"Punjab Kings","v":[0.5,-0.33,-0.34,-0.09,-0.18,0.3,0.48,-1.16,-0.51,-0.25,-0.37,-0.52,-0.19,-0.21,0.21,-0.36,-0.14]},{"team":"Rajasthan Royals","v":[0.61,-0.14,-0.54,-0.77,0.21,0.19,-0.19,-0.14,null,null,-0.34,-0.19,-0.66,-1.05,0.36,0.37,0.02]},{"team":"Royal Challengers Bengaluru","v":[-0.99,-0.39,0.32,0.45,-0.19,0.4,-0.44,0.69,0.58,-0.83,0.04,-0.15,-0.04,0.07,-0.36,0.42,0.26]},{"team":"Sunrisers Hyderabad","v":[null,null,null,null,null,0.02,0.08,-0.11,0.47,0.53,-0.02,0.61,0.21,-0.53,-0.53,-0.56,-0.08]}]}};
+const AB={"Chennai Super Kings":"CSK","Mumbai Indians":"MI","Kolkata Knight Riders":"KKR","Rajasthan Royals":"RR","Royal Challengers Bengaluru":"RCB","Sunrisers Hyderabad":"SRH","Delhi Capitals":"DC","Punjab Kings":"PBKS","Deccan Chargers":"DCH","Gujarat Titans":"GT","Lucknow Super Giants":"LSG","Rising Pune Supergiant":"RPS","Gujarat Lions":"GL","Pune Warriors":"PWI"};
+const ab=t=>AB[t]||t;
+const $=(s,e=document)=>e.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fx=(n,d=2)=>Number(n).toFixed(d);
+const sg=(n,d=2)=>(n>0?"+":n<0?"−":"")+Math.abs(n).toFixed(d);
+const fi=n=>Number(n).toLocaleString("en-US");
+const fp=p=>p<0.001?"< 0.001":p.toFixed(3);
+const T=D.teams, TB=Object.fromEntries(T.map(t=>[t.team,t]));
+const state={team:"Chennai Super Kings"};
+const H=D.headline;
+
+/* ---------- scales and ticks ---------- */
+function nice(min,max,n=5){const span=max-min||1,raw=span/n,mag=Math.pow(10,Math.floor(Math.log10(raw)));
+  const step=[1,2,2.5,5,10].map(m=>m*mag).find(s=>span/s<=n+.5)||10*mag;
+  const lo=Math.floor(min/step+1e-9)*step,hi=Math.ceil(max/step-1e-9)*step,t=[];
+  for(let v=lo;v<=hi+1e-9;v+=step)t.push(+v.toFixed(6));return{lo,hi,t,step}}
+const dec=s=>{for(let d=0;d<4;d++)if(Math.abs(s*Math.pow(10,d)-Math.round(s*Math.pow(10,d)))<1e-6)return d;return 2};
+function tipAttr(h){return h?` data-tip="${esc(h)}"`:""}
+
+/* ---------- generic line chart (multi-series, hover column, optional bands) ---------- */
+function lineChart(o){
+  const w=o.w,h=o.h||240,m={l:o.ml||40,r:o.labelEnd?o.labelEnd:14,t:o.bands?22:12,b:26};
+  const n=o.xs.length,iw=w-m.l-m.r,ih=h-m.t-m.b;
+  const all=o.series.flatMap(s=>s.vals).filter(v=>v!=null);
+  let lo=o.yDom?o.yDom[0]:Math.min(...all),hi=o.yDom?o.yDom[1]:Math.max(...all);
+  const nt=nice(lo,hi,4);lo=o.yDom?lo:nt.lo;hi=o.yDom?hi:nt.hi;if(!o.yDom){const p=(hi-lo)*.08;hi+=p}
+  const X=i=>m.l+(n===1?iw/2:i*iw/(n-1)),Y=v=>m.t+ih-(v-lo)/(hi-lo)*ih,step=n>1?iw/(n-1):iw;
+  const ticks=nice(lo,hi,4).t.filter(v=>v>=lo-1e-9&&v<=hi+1e-9),d=dec(nice(lo,hi,4).step);
+  let s=`<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(o.label||"Line chart")}">`;
+  (o.bands||[]).forEach(b=>{const x0=X(b.from)-step/2,x1=X(b.to)+step/2;
+    if(b.shade)s+=`<rect x="${Math.max(m.l,x0)}" y="${m.t}" width="${Math.min(m.l+iw,x1)-Math.max(m.l,x0)}" height="${ih}" style="fill:var(--band)"/>`;
+    s+=`<text x="${(Math.max(m.l,x0)+Math.min(m.l+iw,x1))/2}" y="${m.t-8}" text-anchor="middle" class="m">${b.label}</text>`});
+  ticks.forEach(v=>{s+=`<line x1="${m.l}" x2="${m.l+iw}" y1="${Y(v)}" y2="${Y(v)}" style="stroke:var(--grid)"/><text x="${m.l-6}" y="${Y(v)+4}" text-anchor="end" class="m">${v.toFixed(d)}</text>`});
+  const k=Math.max(1,Math.ceil((o.minGap||30)/step));
+  o.xs.forEach((x,i)=>{if(i%k===0)s+=`<text x="${X(i)}" y="${h-8}" text-anchor="middle" class="m">${o.xFmt?o.xFmt(x):x}</text>`});
+  s+=`<line x1="${m.l}" x2="${m.l+iw}" y1="${m.t+ih}" y2="${m.t+ih}" style="stroke:var(--axis)"/>`;
+  o.series.forEach(se=>{
+    let seg=[],segs=[];se.vals.forEach((v,i)=>{if(v==null){if(seg.length)segs.push(seg);seg=[]}else seg.push([X(i),Y(v)])});if(seg.length)segs.push(seg);
+    if(o.area&&o.series.length===1&&segs.length===1){const p=segs[0];s+=`<path d="M${p[0][0]},${m.t+ih} ${p.map(q=>`L${q[0]},${q[1]}`).join(" ")} L${p[p.length-1][0]},${m.t+ih}Z" style="fill:${se.color};fill-opacity:.12"/>`}
+    segs.forEach(p=>{s+=`<path d="${p.map((q,i)=>(i?"L":"M")+q[0]+","+q[1]).join(" ")}" style="fill:none;stroke:${se.color};stroke-width:${se.w||2};stroke-linejoin:round;stroke-linecap:round;opacity:${se.op||1}"/>`});
+    let li=-1;se.vals.forEach((v,i)=>{if(v!=null)li=i});
+    if(li>=0&&!se.noEnd){s+=`<circle cx="${X(li)}" cy="${Y(se.vals[li])}" r="4" style="fill:${se.color};stroke:var(--surface);stroke-width:2"/>`;
+      if(o.labelEnd&&se.label)s+=`<text x="${X(li)+9}" y="${Y(se.vals[li])+4}" class="b">${esc(se.label)}</text>`}});
+  if(o.tip)o.xs.forEach((x,i)=>{s+=`<rect class="hit" x="${X(i)-step/2}" y="${m.t}" width="${step}" height="${ih}"${tipAttr(o.tip(i))}/>`});
+  return s+"</svg>"}
+
+/* ---------- vertical bars ---------- */
+function barChart(o){
+  const w=o.w,h=o.h||240,m={l:40,r:14,t:o.bands?22:12,b:26},n=o.xs.length,iw=w-m.l-m.r,ih=h-m.t-m.b;
+  const hi0=Math.max(...o.series.flatMap(s=>s.vals)),nt=nice(0,hi0*1.05,4),hi=nt.hi,lo=0,d=dec(nt.step);
+  const slot=iw/n,ns=o.series.length,gap=Math.max(2,slot*.18),bw=Math.max(3,(slot-gap)/ns-(ns>1?2:0));
+  const Y=v=>m.t+ih-v/hi*ih;
+  let s=`<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(o.label||"Bar chart")}">`;
+  (o.bands||[]).forEach(b=>{const x0=m.l+b.from*slot,x1=m.l+(b.to+1)*slot;
+    if(b.shade)s+=`<rect x="${x0}" y="${m.t}" width="${x1-x0}" height="${ih}" style="fill:var(--band)"/>`;
+    s+=`<text x="${(x0+x1)/2}" y="${m.t-8}" text-anchor="middle" class="m">${b.label}</text>`});
+  nt.t.filter(v=>v<=hi+1e-9).forEach(v=>{s+=`<line x1="${m.l}" x2="${m.l+iw}" y1="${Y(v)}" y2="${Y(v)}" style="stroke:var(--grid)"/><text x="${m.l-6}" y="${Y(v)+4}" text-anchor="end" class="m">${v.toFixed(d)}</text>`});
+  const k=Math.max(1,Math.ceil((o.minGap||26)/slot));
+  o.xs.forEach((x,i)=>{const cx=m.l+slot*(i+.5);if(i%k===0)s+=`<text x="${cx}" y="${h-8}" text-anchor="middle" class="m">${o.xFmt?o.xFmt(x):x}</text>`;
+    o.series.forEach((se,j)=>{const v=se.vals[i],bx=cx-(ns*(bw+2)-2)/2+j*(bw+2),by=Y(v),bh=m.t+ih-by,r=Math.min(4,bw/2,bh);
+      s+=`<path d="M${bx},${m.t+ih} V${by+r} Q${bx},${by} ${bx+r},${by} H${bx+bw-r} Q${bx+bw},${by} ${bx+bw},${by+r} V${m.t+ih}Z" style="fill:${se.color}"/>`});
+    if(o.tip)s+=`<rect class="hit" x="${m.l+slot*i}" y="${m.t}" width="${slot}" height="${ih}"${tipAttr(o.tip(i))}/>`});
+  s+=`<line x1="${m.l}" x2="${m.l+iw}" y1="${m.t+ih}" y2="${m.t+ih}" style="stroke:var(--axis)"/>`;
+  if(o.valueLabels)o.xs.forEach((x,i)=>o.series.forEach((se,j)=>{const cx=m.l+slot*(i+.5),bx=cx-(ns*(bw+2)-2)/2+j*(bw+2)+bw/2;s+=`<text x="${bx}" y="${Y(se.vals[i])-5}" text-anchor="middle" class="b">${se.vals[i].toFixed(o.vd||1)}</text>`}));
+  return s+"</svg>"}
+
+/* ---------- scatter with greedy label placement ---------- */
+function scatter(o){
+  const w=o.w,h=o.h,m={l:46,r:16,t:12,b:40},iw=w-m.l-m.r,ih=h-m.t-m.b;
+  const xs=o.pts.map(p=>p.x),ys=o.pts.map(p=>p.y);
+  const xn=nice(o.xDom?o.xDom[0]:Math.min(...xs),o.xDom?o.xDom[1]:Math.max(...xs),5),yn=nice(o.yDom?o.yDom[0]:Math.min(...ys),o.yDom?o.yDom[1]:Math.max(...ys),5);
+  const xl=o.xDom?o.xDom[0]:xn.lo,xh=o.xDom?o.xDom[1]:xn.hi,yl=o.yDom?o.yDom[0]:yn.lo,yh=o.yDom?o.yDom[1]:yn.hi;
+  const X=v=>o.revX?m.l+(xh-v)/(xh-xl)*iw:m.l+(v-xl)/(xh-xl)*iw,Y=v=>m.t+ih-(v-yl)/(yh-yl)*ih;
+  let s=`<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(o.label||"Scatter plot")}">`;
+  yn.t.filter(v=>v>=yl-1e-9&&v<=yh+1e-9).forEach(v=>{s+=`<line x1="${m.l}" x2="${m.l+iw}" y1="${Y(v)}" y2="${Y(v)}" style="stroke:var(--grid)"/><text x="${m.l-6}" y="${Y(v)+4}" text-anchor="end" class="m">${v.toFixed(dec(yn.step))}</text>`});
+  xn.t.filter(v=>v>=xl-1e-9&&v<=xh+1e-9).forEach(v=>{s+=`<line y1="${m.t}" y2="${m.t+ih}" x1="${X(v)}" x2="${X(v)}" style="stroke:var(--grid)"/><text x="${X(v)}" y="${m.t+ih+15}" text-anchor="middle" class="m">${v.toFixed(dec(xn.step))}</text>`});
+  s+=`<line x1="${m.l}" x2="${m.l+iw}" y1="${m.t+ih}" y2="${m.t+ih}" style="stroke:var(--axis)"/><line x1="${m.l}" x2="${m.l}" y1="${m.t}" y2="${m.t+ih}" style="stroke:var(--axis)"/>`;
+  s+=`<text x="${m.l+iw/2}" y="${h-4}" text-anchor="middle" class="m">${esc(o.xLabel)}</text><text transform="translate(12 ${m.t+ih/2}) rotate(-90)" text-anchor="middle" class="m">${esc(o.yLabel)}</text>`;
+  if(o.avg){s+=`<line x1="${X(o.avg.x)}" x2="${X(o.avg.x)}" y1="${m.t}" y2="${m.t+ih}" style="stroke:var(--axis);stroke-dasharray:4 4"/><line x1="${m.l}" x2="${m.l+iw}" y1="${Y(o.avg.y)}" y2="${Y(o.avg.y)}" style="stroke:var(--axis);stroke-dasharray:4 4"/>`}
+  if(o.line)s+=`<line x1="${X(o.line[0][0])}" y1="${Y(o.line[0][1])}" x2="${X(o.line[1][0])}" y2="${Y(o.line[1][1])}" style="stroke:var(--ink2);stroke-width:1.5"/>`;
+  const placed=[];
+  const pts=[...o.pts].sort((a,b)=>(a.sel?1:0)-(b.sel?1:0));
+  pts.forEach(p=>{const cx=X(p.x),cy=Y(p.y),r=p.r||(p.sel?7:5.5);
+    s+=`<circle class="dot" cx="${cx}" cy="${cy}" r="${r}" style="fill:${p.sel?"var(--s2)":"var(--s1)"};fill-opacity:${p.op||1};stroke:var(--surface);stroke-width:2"${tipAttr(p.tip)}/><circle cx="${cx}" cy="${cy}" r="${r+7}" style="fill:transparent"${tipAttr(p.tip)}/>`});
+  if(o.labels)pts.slice().reverse().forEach(p=>{const cx=X(p.x),cy=Y(p.y),tw=p.label.length*6.4+4,r=p.sel?7:5.5;
+    const cands=[[r+3,4,"start"],[-r-3,4,"end"],[0,-r-5,"middle"],[0,r+13,"middle"]];
+    for(const c of cands){const x0=c[2]==="start"?cx+c[0]:c[2]==="end"?cx+c[0]-tw:cx-tw/2,y0=cy+c[1]-10;
+      const box=[x0,y0,x0+tw,y0+13];
+      if(box[0]<m.l-30||box[2]>w-2||box[1]<m.t-6||box[3]>m.t+ih+4)continue;
+      if(placed.some(b=>!(box[2]<b[0]||box[0]>b[2]||box[3]<b[1]||box[1]>b[3])))continue;
+      placed.push(box);s+=`<text x="${cx+c[0]}" y="${cy+c[1]}" text-anchor="${c[2]}" class="${p.sel?"b":""}">${esc(p.label)}</text>`;break}});
+  return s+"</svg>"}
+
+/* ---------- tooltip ---------- */
+const tip=$("#tip");
+function showTip(e){const t=e.target.closest&&e.target.closest("[data-tip]");
+  if(!t){tip.style.opacity=0;return}
+  const parts=t.getAttribute("data-tip").split("|");
+  tip.innerHTML=`<b>${esc(parts[0])}</b>`+parts.slice(1).map(esc).join("<br>");
+  tip.style.opacity=1;const r=tip.getBoundingClientRect();let x=e.clientX+14,y=e.clientY+14;
+  if(x+r.width>innerWidth-8)x=e.clientX-r.width-14;if(y+r.height>innerHeight-8)y=e.clientY-r.height-14;
+  tip.style.left=Math.max(4,x)+"px";tip.style.top=Math.max(4,y)+"px"}
+document.addEventListener("pointermove",showTip);document.addEventListener("pointerleave",()=>tip.style.opacity=0);
+document.addEventListener("scroll",()=>tip.style.opacity=0,{passive:true});
+
+/* ---------- small html helpers ---------- */
+function dataTable(head,rows){return `<details><summary>View as table</summary><div class="scroll"><table><thead><tr>${head.map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table></div></details>`}
+function hbars(items,max,fmt,color){return items.map(i=>`<div class="row"><span class="lab" title="${esc(i.label)}">${esc(i.label)}</span><span class="tr"><span class="fl" style="width:${Math.max(0,i.v/max*100)}%;${i.color||color?`background:${i.color||color}`:""}"></span></span><span class="v">${fmt(i)}</span></div>`).join("")}
+const yy=y=>"’"+String(y).slice(2);
+
+/* ---------- named charts, each (width) -> svg string ---------- */
+const bands=[{from:0,to:5,label:"Powerplay",shade:1},{from:6,to:15,label:"Middle"},{from:16,to:19,label:"Death",shade:1}];
+const overs=D.per_over.map(o=>o.over);
+const charts={
+  runsOver:w=>lineChart({w,h:250,xs:overs,series:[{name:"Runs",color:"var(--s1)",vals:D.per_over.map(o=>o.runs)}],yDom:[0,Math.max(...D.per_over.map(o=>o.runs))*1.12],area:1,bands,minGap:22,label:"Average runs per over",tip:i=>`Over ${overs[i]}|${fx(D.per_over[i].runs)} runs per innings`}),
+  wktsOver:w=>barChart({w,h:250,xs:overs,series:[{color:"var(--s2)",vals:D.per_over.map(o=>o.wkts)}],bands,minGap:22,label:"Average wickets per over",tip:i=>`Over ${overs[i]}|${fx(D.per_over[i].wkts,2)} wickets per innings`}),
+  yrRR:w=>lineChart({w,h:250,xs:D.yearly.map(y=>y.year),xFmt:yy,series:[{color:"var(--s1)",vals:D.yearly.map(y=>y.rr)}],yDom:[7,10],area:1,minGap:28,label:"Run rate by season",tip:i=>{const y=D.yearly[i];return `${y.year}|${fx(y.rr)} runs per over|${y.matches} matches`}}),
+  yrSix:w=>barChart({w,h:250,xs:D.yearly.map(y=>y.year),xFmt:yy,series:[{color:"var(--s2)",vals:D.yearly.map(y=>y.sixes)}],minGap:28,label:"Sixes per match by season",tip:i=>`${D.yearly[i].year}|${fx(D.yearly[i].sixes,1)} sixes per match`}),
+  yrShare:w=>lineChart({w,h:260,xs:D.yearly.map(y=>y.year),xFmt:yy,labelEnd:w<520?0:96,series:[{name:"Dot",label:"Dot balls",color:"var(--muted)",w:2.5,vals:D.yearly.map(y=>y.dot)},{name:"Bnd",label:"Boundaries",color:"var(--s1)",vals:D.yearly.map(y=>y.bnd)}],yDom:[10,42],minGap:28,label:"Boundary and dot ball share by season",
+    tip:i=>{const y=D.yearly[i];return `${y.year}|Boundaries: ${fx(y.bnd,1)}% of balls|Dot balls: ${fx(y.dot,1)}% of balls`}}),
+  scatter:w=>{const sel=state.team,pts=T.map(t=>({x:t.econ,y:t.bat_rr,label:ab(t.team),sel:t.team===sel,tip:`${t.team}|Batting ${fx(t.bat_rr)} runs/over|Economy ${fx(t.econ)} runs/over|Win ${fx(t.win_pct,1)}% (${t.matches} matches)`}));
+    const ex=T.map(t=>t.econ),ey=T.map(t=>t.bat_rr),avg=a=>a.reduce((x,y)=>x+y,0)/a.length;
+    return scatter({w,h:Math.min(430,Math.max(300,w*.78)),pts,labels:1,revX:1,xDom:[Math.floor(Math.min(...ex)*10-1)/10,Math.ceil(Math.max(...ex)*10+1)/10],yDom:[Math.floor(Math.min(...ey)*10-1)/10,Math.ceil(Math.max(...ey)*10+1)/10],avg:{x:avg(ex),y:avg(ey)},xLabel:"Bowling economy, runs conceded per over (lower is better, to the right)",yLabel:"Batting run rate",label:"Batting run rate against bowling economy"})},
+  role:w=>{const rows=D.role.slice().sort((a,b)=>(b.win_chase-b.win_first)-(a.win_chase-a.win_first)),rh=26,m={l:w<520?44:60,r:14,t:6,b:30},iw=w-m.l-m.r,h=m.t+m.b+rows.length*rh;
+    const lo=25,hi=70,X=v=>m.l+(v-lo)/(hi-lo)*iw;let s=`<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Win percent batting first against chasing">`;
+    [30,40,50,60,70].forEach(v=>{s+=`<line x1="${X(v)}" x2="${X(v)}" y1="${m.t}" y2="${h-m.b}" style="stroke:${v===50?"var(--axis)":"var(--grid)"};${v===50?"stroke-dasharray:4 4":""}"/><text x="${X(v)}" y="${h-12}" text-anchor="middle" class="m">${v}%</text>`});
+    rows.forEach((r,i)=>{const y=m.t+i*rh+rh/2,t=r.team,sel=t===state.team;
+      s+=`<text x="${m.l-8}" y="${y+4}" text-anchor="end" class="${sel?"b":""}">${ab(t)}</text><line x1="${X(r.win_first)}" x2="${X(r.win_chase)}" y1="${y}" y2="${y}" style="stroke:var(--axis);stroke-width:3;stroke-linecap:round"/>`+
+      `<circle cx="${X(r.win_first)}" cy="${y}" r="5.5" style="fill:var(--s1);stroke:var(--surface);stroke-width:2"/><circle cx="${X(r.win_chase)}" cy="${y}" r="5.5" style="fill:var(--s2);stroke:var(--surface);stroke-width:2"/>`+
+      `<rect class="hit" x="0" y="${y-rh/2}" width="${w}" height="${rh}"${tipAttr(`${t}|Batting first: ${fx(r.win_first,1)}% wins|Chasing: ${fx(r.win_chase,1)}% wins|Gap: ${sg(r.win_chase-r.win_first,1)} points`)}/>`});
+    return s+"</svg>"},
+  phaseGap:w=>barChart({w,h:260,xs:D.tests.h7.map(p=>p.phase),series:[{color:"var(--s1)",vals:D.tests.h7.map(p=>p.win)},{color:"var(--s2)",vals:D.tests.h7.map(p=>p.loss)}],valueLabels:1,vd:2,minGap:60,label:"Run rate by phase in winning and losing innings",tip:i=>{const p=D.tests.h7[i];return `${p.phase}|Winning innings: ${fx(p.win)}|Losing innings: ${fx(p.loss)}|Gap ${sg(p.diff)} runs per over, d = ${fx(p.d)}`}}),
+  collapse:w=>barChart({w,h:260,xs:["0–2 wickets lost","3+ wickets lost"],series:[{color:"var(--s1)",vals:[D.tests.h4.win_ok,D.tests.h4.win_collapse]}],valueLabels:1,vd:1,minGap:100,label:"Win percent by powerplay wickets lost",tip:i=>i?`3+ wickets lost in powerplay|${fx(D.tests.h4.win_collapse,1)}% won|${fi(D.tests.h4.n_collapse)} innings`:`0 to 2 wickets lost|${fx(D.tests.h4.win_ok,1)}% won|${fi(D.tests.h4.n_ok)} innings`}),
+  rank:w=>{const rows=T.slice().sort((a,b)=>b.performance_index-a.performance_index),rh=27,short=w<560,m={l:short?44:158,r:14,t:6,b:30},iw=w-m.l-m.r,h=m.t+m.b+rows.length*rh;
+    const ext=rows.flatMap(t=>[t.batting_index*.5+t.bowling_index*.5,Math.max(t.batting_index*.5,0)+Math.max(t.bowling_index*.5,0),Math.min(t.batting_index*.5,0)+Math.min(t.bowling_index*.5,0)]);
+    const n=nice(Math.min(...ext),Math.max(...ext),5),X=v=>m.l+(v-n.lo)/(n.hi-n.lo)*iw;let s=`<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Team performance index">`;
+    n.t.forEach(v=>{s+=`<line x1="${X(v)}" x2="${X(v)}" y1="${m.t}" y2="${h-m.b}" style="stroke:${Math.abs(v)<1e-9?"var(--axis)":"var(--grid)"}"/><text x="${X(v)}" y="${h-12}" text-anchor="middle" class="m">${sg(v,1).replace("+","")}</text>`});
+    rows.forEach((t,i)=>{const y=m.t+i*rh+rh/2,sel=t.team===state.team,segs=[[t.batting_index*.5,"var(--s1)"],[t.bowling_index*.5,"var(--s2)"]];let pos=0,neg=0;
+      s+=`<text x="${m.l-8}" y="${y+4}" text-anchor="end" class="${sel?"b":""}">${short?ab(t.team):esc(t.team)}</text>`;
+      segs.forEach(([v,c])=>{let a,b;if(v>=0){a=pos;pos+=v;b=pos}else{b=neg;neg+=v;a=neg}
+        s+=`<rect x="${X(a)+(v>=0?0:0)}" y="${y-8}" width="${Math.max(0,X(b)-X(a)-1)}" height="16" rx="2" style="fill:${c}"/>`});
+      s+=`<path d="M${X(t.performance_index)},${y-6} l5,6 l-5,6 l-5,-6Z" style="fill:var(--ink);stroke:var(--surface);stroke-width:1.5"/>`+
+        `<rect class="hit" x="0" y="${y-rh/2}" width="${w}" height="${rh}"${tipAttr(`${t.team}|Index ${sg(t.performance_index)} (${t.tier}, ${t.profile})|Batting ${sg(t.batting_index)}, bowling ${sg(t.bowling_index)}|Win ${fx(t.win_pct,1)}% over ${t.matches} matches`)}/>`});
+    return s+"</svg>"},
+  valid:w=>{const V=D.validation,pts=V.points.map(p=>({x:p.perf,y:p.win,r:4,op:.62,sel:p.team===state.team,label:"",tip:`${ab(p.team)} ${p.year}|Index ${sg(p.perf)}|Won ${fx(p.win,1)}% of ${"season matches"}`}));
+    const xs=pts.map(p=>p.x),n=pts.length,mx=xs.reduce((a,b)=>a+b,0)/n,my=pts.reduce((a,p)=>a+p.y,0)/n;
+    let sxy=0,sxx=0;pts.forEach(p=>{sxy+=(p.x-mx)*(p.y-my);sxx+=(p.x-mx)*(p.x-mx)});const b=sxy/sxx,a=my-b*mx,x0=Math.min(...xs),x1=Math.max(...xs);
+    return scatter({w,h:Math.min(380,Math.max(280,w*.85)),pts,line:[[x0,a+b*x0],[x1,a+b*x1]],xDom:[Math.floor(x0*2-.5)/2,Math.ceil(x1*2+.5)/2],yDom:[10,90],xLabel:"Performance Index in that season (0 = average franchise)",yLabel:"Season win %",label:"Performance index against season win percent"})},
+  traj:w=>{const Tj=D.traj,sel=state.team,cur=Tj.series.find(s=>s.team===sel),others=Tj.series.filter(s=>s.team!==sel);
+    const all=Tj.series.flatMap(s=>s.v).filter(v=>v!=null),lo=Math.floor(Math.min(...all)*2-.2)/2,hi=Math.ceil(Math.max(...all)*2+.2)/2;
+    const series=others.map(s=>({color:"var(--axis)",w:1.3,vals:s.v,noEnd:1,op:.9}));
+    if(cur)series.push({color:"var(--s2)",w:3,vals:cur.v,label:ab(sel)});
+    return lineChart({w,h:300,xs:Tj.years,xFmt:yy,series,yDom:[lo,hi],labelEnd:cur&&w>520?60:14,minGap:28,label:"Team performance index by season",
+      tip:i=>{let best=null;Tj.series.forEach(s=>{const v=s.v[i];if(v!=null&&(!best||v>best.v))best={t:s.team,v}});const cv=cur&&cur.v[i];
+        return `${Tj.years[i]}|${cv!=null?`${sel}: ${sg(cv)}`:`${sel}: no data`}|${best?`Season leader: ${best.t} ${sg(best.v)}`:""}`}})}
+};
+
+/* ---------- heat tables ---------- */
+function heat(cols,key,lowGood){const rows=T.slice().sort((a,b)=>b.win_pct-a.win_pct),all=rows.flatMap(t=>cols.map(c=>t[c])),mn=Math.min(...all),mx=Math.max(...all);
+  const cell=v=>{let q=(v-mn)/(mx-mn);if(lowGood)q=1-q;return `<td style="background:color-mix(in srgb,var(--s1) ${Math.round(q*52)}%,var(--surface))">${fx(v)}</td>`};
+  return `<table class="hm"><thead><tr><th></th><th>Powerplay</th><th>Middle</th><th>Death</th></tr></thead><tbody>${rows.map(t=>`<tr class="${t.team===state.team?"sel":""}"><td title="${esc(t.team)}">${ab(t.team)}</td>${cols.map(c=>cell(t[c])).join("")}</tr>`).join("")}</tbody></table>`}
+
+/* ---------- static fills ---------- */
+function fillStatic(){
+  $("#meta").textContent=`Ball-by-ball case study · ${H.y0}–${H.y1} · ${fi(H.deliveries)} deliveries · ${fi(H.matches)} matches with a result`;
+  const dp=D.phase[2];
+  $("#ov-sub").textContent=`The last four overs bring ${fx(dp.rr)} runs an over and a wicket every ${fx(dp.bpw,0)} balls, against about ${fx(D.phase[1].rr,1)} runs an over in the middle. Overs 1 to 6 are the slowest to score, with ${fx(D.phase[0].dot,0)}% dot balls.`;
+  $("#kpis").innerHTML=[[fi(H.matches),"matches with a result"],[fi(H.runs),"runs scored"],[fx(H.run_rate),"runs per over"],[fx(H.dot_pct,1)+"%","legal balls with no run"],[fi(H.sixes),"sixes hit"],[fi(H.wickets),"wickets fallen"]].map(k=>`<div class="kpi"><b>${k[0]}</b><span>${k[1]}</span></div>`).join("");
+  $("#phases").innerHTML=D.phase.map(p=>`<div class="ph"><h4>${p.phase}</h4><div class="big">${fx(p.rr)}<span style="font:500 12px var(--body);color:var(--muted)"> runs per over</span></div><dl><dt>share of all runs</dt><dd>${fx(p.share,1)}%</dd><dt>dot balls</dt><dd>${fx(p.dot,1)}%</dd><dt>boundary balls</dt><dd>${fx(p.bnd,1)}%</dd><dt>balls per wicket</dt><dd>${fx(p.bpw,1)}</dd></dl></div>`).join("");
+  const tot=D.dismissals.reduce((a,d)=>a+d.n,0);
+  $("#dismissals").innerHTML=hbars(D.dismissals.slice(0,6).map(d=>({label:d.kind==="lbw"?"LBW":d.kind[0].toUpperCase()+d.kind.slice(1),v:d.n/tot*100,n:d.n})),Math.max(...D.dismissals.map(d=>d.n/tot*100))*1.05,i=>fx(i.v,1)+"%");
+  $("#tb-over").innerHTML=dataTable(["Over","Runs","Wickets"],D.per_over.map(o=>[o.over,fx(o.runs),fx(o.wkts)]));
+  const y0=D.yearly[0],y1=D.yearly[D.yearly.length-1];
+  $("#se-lead").textContent=`Scoring is climbing: ${fx(y1.rr)} an over in ${y1.year}`;
+  $("#se-sub").textContent=`Innings in 2016 and later score ${fx(D.tests.h5.b)} an over against ${fx(D.tests.h5.a)} in 2008 to 2015. Sixes per match went from ${fx(y0.sixes,1)} in ${y0.year} to ${fx(y1.sixes,1)} in ${y1.year}, so benchmarks from the early seasons do not carry over.`;
+  $("#tb-year").innerHTML=dataTable(["Season","Runs/over","Boundary %","Dot %","Sixes/match"],D.yearly.map(y=>[y.year,fx(y.rr),fx(y.bnd,1),fx(y.dot,1),fx(y.sixes,1)]));
+  $("#te-sub").textContent=`Overall batting run rates are close across franchises (an ANOVA across the ${D.tests.h6.k} biggest finds no real difference, p = ${fx(D.tests.h6.p)}). The differences are in the phases and in the bowling, so pick a franchise to see its profile.`;
+  const chipHtml=T.map(t=>`<button class="chip" data-team="${esc(t.team)}" title="${esc(t.team)}" aria-pressed="false">${ab(t.team)}</button>`).join("");
+  $("#teamChips").innerHTML=chipHtml;$("#teamChips2").innerHTML=chipHtml;
+  const h=D.tests,ok=Object.values({a:h.h1,b:h.h2,c:h.h4,d:h.h5,e:h.h6}).filter(x=>x.p<.05).length;
+  $("#ts-lead").textContent="Winning innings are faster, cleaner and stronger at the death";
+  const sigTxt=p=>p<.05?`<span class="pill sig">Significant</span>`:`<span class="pill ns">Not significant</span>`;
+  const rows=[
+   ["H1","Winning innings are scored at a higher run rate",`<p class="num">Wins ${fx(h.h1.a)} against losses ${fx(h.h1.b)} runs per over</p><p class="n">n = ${fi(h.h1.na)} each</p>`,`t = ${fx(h.h1.t,1)}<br>p ${fp(h.h1.p)}`,h.h1.p,`d = ${fx(h.h1.d)}`],
+   ["H2","Winning innings have a lower dot-ball share",`<p class="num">Wins ${fx(h.h2.a,1)}% against losses ${fx(h.h2.b,1)}%</p><p class="n">of legal balls faced</p>`,`t = ${fx(h.h2.t,1)}<br>p ${fp(h.h2.p)}`,h.h2.p,`d = ${fx(h.h2.d)}`],
+   ["H3","Run rate differs between batting first and chasing",`<p class="num">First innings ${fx(h.h3.a)} against chase ${fx(h.h3.b)}</p><p class="n">No real difference overall</p>`,`t = ${fx(h.h3.t,1)}<br>p ${fp(h.h3.p)}`,h.h3.p,`d = ${fx(h.h3.d)}`],
+   ["H4","Losing 3+ powerplay wickets goes with losing the match",`<p class="num">Won ${fx(h.h4.win_collapse,1)}% after a collapse, ${fx(h.h4.win_ok,1)}% otherwise</p><p class="n">${fi(h.h4.n_collapse)} collapses in ${fi(h.h4.n_collapse+h.h4.n_ok)} innings</p>`,`χ² = ${fx(h.h4.chi2,1)}<br>p ${fp(h.h4.p)}`,h.h4.p,`${fx(h.h4.win_ok-h.h4.win_collapse,1)} pt gap`],
+   ["H5","Scoring has changed over time",`<p class="num">2008–15 ${fx(h.h5.a)} against 2016 on ${fx(h.h5.b)}</p><p class="n">runs per over per innings</p>`,`t = ${fx(h.h5.t,1)}<br>p ${fp(h.h5.p)}`,h.h5.p,`d = ${fx(h.h5.d)}`],
+   ["H6","Franchises differ in batting run rate",`<p class="num">${h.h6.k} franchises with 100+ innings</p><p class="n">Differences are within normal variation</p>`,`F = ${fx(h.h6.F)}<br>p ${fp(h.h6.p)}`,h.h6.p,"–"],
+   ["H7","Some phases separate winners from losers more",`<p class="num">Death +${fx(h.h7[2].diff)}, middle +${fx(h.h7[1].diff)}, powerplay +${fx(h.h7[0].diff)}</p><p class="n">runs per over, wins minus losses</p>`,`all p ${fp(Math.max(...h.h7.map(x=>x.p)))}`,Math.max(...h.h7.map(x=>x.p)),`death d = ${fx(h.h7[2].d)}`]];
+  $("#hyp").innerHTML=rows.map(r=>`<div class="hrow"><span class="id">${r[0]}</span><p class="q">${r[1]}</p><div>${r[2]}</div><p class="num">${r[3]}</p><div>${sigTxt(r[4])}<p class="n" style="margin-top:4px">${r[5]}</p></div></div>`).join("");
+  const V=D.validation;
+  $("#ix-lead").textContent=`An index with no win data still predicts wins (rho = ${fx(V.rho)})`;
+  $("#ix-sub").textContent=`Built only from ball-by-ball statistics, the index tracks season win % across ${V.n} team-seasons (Spearman rho ${fx(V.rho)}, p ${fp(V.p)}). Together the batting and bowling parts explain ${Math.round(V.r2*100)}% of the variation in win %.`;
+  $("#tiers").innerHTML=hbars(V.tiers.map(t=>({label:t.tier+" ("+t.n+")",v:t.win})),75,i=>fx(i.v,1)+"%");
+  $("#comp").innerHTML=hbars(V.comp.slice().reverse().map(c=>({label:c.label,v:c.rho,color:c.side==="bat"?"var(--s1)":"var(--s2)"})),.6,i=>fx(i.v));
+  $("#how").innerHTML=[["1","Standardise","Each metric becomes a z-score against the other franchises (within each season for team-seasons). Lower-is-better metrics are flipped."],["2","Weight equally","Batting: run rate, powerplay, death, boundary %, dot % (flipped). Bowling: economy, strike rate, powerplay, death, dot %."],["3","Label","Elite 0.50+, Strong 0.15 to 0.50, Average within ±0.15, Struggling below. Batting-led or bowling-led if the parts differ by 0.3."]].map(a=>`<article><span class="k">${a[0]}</span><div><h4>${a[1]}</h4><p>${a[2]}</p></div></article>`).join("");
+  $("#tb-rank").innerHTML=dataTable(["Franchise","Batting","Bowling","Index","Tier","Win %"],T.slice().sort((a,b)=>b.performance_index-a.performance_index).map(t=>[t.team,sg(t.batting_index),sg(t.bowling_index),sg(t.performance_index),t.tier,fx(t.win_pct,1)]));
+  const rl=D.role.map(r=>({t:r.team,g:r.win_chase-r.win_first})).sort((a,b)=>b.g-a.g),L=h;
+  $("#insights").innerHTML=[
+   ["Scoring keeps rising.",`Run rate went from ${fx(L.h5.a)} (2008–15) to ${fx(L.h5.b)} (2016 on), and ${fx(D.yearly[16].rr)} in 2024. Boundaries grew from ${fx(D.yearly[0].bnd,0)}% to ${fx(D.yearly[16].bnd,0)}% of balls, dot balls fell to ${fx(D.yearly[16].dot,0)}%.`],
+   ["The death overs carry the most weight.",`They bring ${fx(D.phase[2].rr)} runs an over and a wicket every ${fx(D.phase[2].bpw,0)} balls. Winners out-score losers by ${fx(L.h7[2].diff)} runs an over there, against ${fx(L.h7[1].diff)} in the middle and ${fx(L.h7[0].diff)} in the powerplay.`],
+   ["Winning innings are faster and cleaner.",`${fx(L.h1.a)} against ${fx(L.h1.b)} runs per over (d = ${fx(L.h1.d)}), and ${fx(L.h2.a,1)}% against ${fx(L.h2.b,1)}% dot balls. Dot balls build the pressure that leads to risky shots.`],
+   ["A powerplay collapse is costly.",`Teams that lose 3 or more wickets in overs 1 to 6 win ${fx(L.h4.win_collapse,1)}% of the time, against ${fx(L.h4.win_ok,1)}% otherwise. It happens in ${Math.round(L.h4.n_collapse/(L.h4.n_collapse+L.h4.n_ok)*100)}% of innings.`],
+   ["Batting first or chasing makes no difference to scoring.",`Run rate is ${fx(L.h3.a)} against ${fx(L.h3.b)} (p = ${fx(L.h3.p)}). Franchise gaps are large though: ${ab(rl[0].t)}, ${ab(rl[1].t)} and ${ab(rl[2].t)} win far more chasing, while ${ab(rl[rl.length-1].t)} wins more setting a target.`],
+   ["Franchises score alike but differ in how.",`Batting run rates are statistically indistinguishable, so identity shows up in phase strengths and in the bowling. Chennai and Mumbai are bowling-led, Gujarat Titans batting-led.`],
+   ["The index is a meaningful measure.",`Elite team-seasons won ${fx(V.tiers[0].win,0)}% on average, Struggling ones ${fx(V.tiers[V.tiers.length-1].win,0)}%.`],
+   ["Bowling matters as much as batting.",`Their rank correlations with win % are ${fx(V.rho_bat)} and ${fx(V.rho_bowl)}. Wicket taking is the single skill most tied to winning (${fx(V.comp[V.comp.length-1].rho)}), powerplay bowling the least (${fx(V.comp[0].rho)}).`]
+  ].map((a,i)=>`<article><span class="k">${i+1}</span><div><h4>${a[0]}</h4><p>${a[1]}</p></div></article>`).join("");
+  $("#recs").innerHTML=`<h3 style="margin-bottom:12px">Recommendations</h3>
+   <h4>Franchises</h4><ul><li>Use the report card to find the weakest skill and spend auction money there.</li><li>Buy wicket takers. Strike rate has the strongest tie to winning of the ten components.</li><li>Protect the powerplay with top-order batters who survive six overs.</li><li>Cut dot balls with strike rotation and boundary options.</li><li>Practise the role you win less in, targets or finishing.</li><li>Track the index each season to see if the squad improved.</li></ul>
+   <h4>Broadcasters and fantasy</h4><ul><li>Build previews around batting-led or bowling-led labels and phase strengths.</li><li>Use phase numbers for live graphics, for example death-over run rate by franchise.</li><li>Show index trajectories in season previews.</li></ul>
+   <h4>Next steps</h4><ul><li>Player-level phase analysis from the same ball-by-ball file.</li><li>Adjust for venue, toss and opposition strength.</li><li>Build a live win-probability model.</li><li>Compare data-driven index weights with equal weights.</li></ul>`;
+  $("#foot").textContent=`Limitations: equal index weights are a judgement. A season has only 14 to 17 matches, so one season's index is noisy. Squads change at every auction. Innings from one match are not independent, so p-values are approximate. ${H.dropped} matches without a result were dropped. Source: IPL Complete Dataset (Kaggle, Patrick B), ${H.y0}–${H.y1}.`;
+}
+
+/* ---------- team-dependent fills ---------- */
+function fillTeam(){
+  document.querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed",c.dataset.team===state.team));
+  $("#hmBat").innerHTML=heat(["pp_rr","mid_rr","death_rr"],"bat",false);
+  $("#hmBowl").innerHTML=heat(["pp_econ","mid_econ","death_econ"],"bowl",true);
+  const t=TB[state.team],mx=D.mix.find(m=>m.team===state.team);
+  const zs=Object.entries(t.z).map(([k,v])=>({k,v,label:D.labels[k]})),side=k=>["bat_rr","pp_rr","death_rr","bat_boundary_pct","bat_dot_pct"].includes(k);
+  $("#report").innerHTML=`<h2>${esc(t.team)}</h2><div class="meta"><span class="pill tier-${t.tier}">${t.tier}</span><span class="pill ns">${t.profile}</span><span style="color:var(--muted);font-size:12.5px">${t.matches} matches, ${fx(t.win_pct,1)}% won</span></div>
+   <div class="idx3"><div><b>${sg(t.batting_index)}</b><span>Batting index</span></div><div><b>${sg(t.bowling_index)}</b><span>Bowling index</span></div><div><b>${sg(t.performance_index)}</b><span>Performance</span></div></div>
+   <p style="margin:0 0 8px;color:var(--ink2)"><b>Strengths:</b> ${t.strengths.join(", ")}.<br><b>Weaknesses:</b> ${t.weaknesses.join(", ")}.</p>
+   <div class="rows" style="gap:4px">${zs.map(z=>{const p=Math.min(Math.abs(z.v)/2.5,1)*50;return `<div class="row" style="grid-template-columns:minmax(100px,140px) minmax(0,1fr) 44px"><span class="lab" title="${esc(z.label)}">${z.label}</span><span class="tr" style="height:10px"><span style="position:absolute;top:0;bottom:0;left:50%;width:1px;background:var(--axis)"></span><span style="position:absolute;top:0;bottom:0;border-radius:2px;background:${side(z.k)?"var(--s1)":"var(--s2)"};${z.v>=0?`left:50%;width:${p}%`:`right:50%;width:${p}%`}"></span></span><span class="v">${sg(z.v,1)}</span></div>`}).join("")}</div>`;
+  const keys=[["caught","Caught"],["bowled","Bowled"],["lbw","LBW"],["run out","Run out"],["stumped","Stumped"]];
+  $("#mix").innerHTML=hbars(keys.map(([k,l])=>({label:l,v:mx[k]})),Math.max(...D.mix.flatMap(m=>keys.map(([k])=>m[k])))*1.05,i=>fx(i.v,1)+"%");
+}
+
+/* ---------- tabs and rendering ---------- */
+const TABS=[["overview","Overview"],["seasons","Seasons"],["teams","Teams"],["tests","Hypotheses"],["index","Performance index"],["take","Takeaways"]];
+let current="overview";
+function mountCharts(){const p=$("#p-"+current);p.querySelectorAll(".chart[data-chart]").forEach(el=>{const w=Math.floor(el.clientWidth);if(w>40)el.innerHTML=charts[el.dataset.chart](w)})}
+function show(id,focus){if(!TABS.some(t=>t[0]===id))id="overview";current=id;
+  document.querySelectorAll("#p-overview,#p-seasons,#p-teams,#p-tests,#p-index,#p-take").forEach(s=>s.hidden=s.id!=="p-"+id);
+  document.querySelectorAll("#tabs button").forEach(b=>{const on=b.dataset.id===id;b.setAttribute("aria-selected",on);b.tabIndex=on?0:-1;if(on&&focus)b.focus()});
+  try{history.replaceState(null,"","#"+id)}catch(e){}
+  mountCharts();scrollTo(0,0)}
+$("#tabs").innerHTML=TABS.map(t=>`<button role="tab" data-id="${t[0]}" aria-controls="p-${t[0]}">${t[1]}</button>`).join("");
+$("#tabs").addEventListener("click",e=>{const b=e.target.closest("button");if(b)show(b.dataset.id)});
+document.addEventListener("keydown",e=>{if(e.target.closest&&e.target.closest("input,select,textarea"))return;
+  const i=TABS.findIndex(t=>t[0]===current);if(e.key==="ArrowRight"&&i<TABS.length-1)show(TABS[i+1][0],e.target.closest&&e.target.closest("#tabs"));
+  if(e.key==="ArrowLeft"&&i>0)show(TABS[i-1][0],e.target.closest&&e.target.closest("#tabs"))});
+["#teamChips","#teamChips2"].forEach(id=>$(id).addEventListener("click",e=>{const c=e.target.closest(".chip");if(!c)return;state.team=c.dataset.team;fillTeam();mountCharts()}));
+let rt;new ResizeObserver(()=>{clearTimeout(rt);rt=setTimeout(mountCharts,80)}).observe(document.body);
+fillStatic();fillTeam();
+let start="overview";try{start=location.hash.slice(1)||"overview"}catch(e){}
+show(start);
+</script>
+</body></html>
